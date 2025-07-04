@@ -2,12 +2,13 @@
 
 namespace App\Core;
 
-/**
- * Class Auth
- * Handles user authentication.
- */
 class Auth
 {
+    public static $mock = false;
+    public static $mockAuthCheck = false;
+    public static $mockAuthId = null;
+    public static $mockUser = null;
+
     /**
      * Attempts to authenticate a user with the given username and password.
      *
@@ -38,6 +39,9 @@ class Auth
      */
     public static function check(): bool
     {
+        if(self::$mock){
+            return self::$mockAuthCheck;
+        }
         return isset($_SESSION['auth_token']);
     }
 
@@ -48,6 +52,9 @@ class Auth
      */
     public static function id(): ?int
     {
+        if(self::$mock){
+            return self::$mockAuthId;
+        }
         return $_SESSION['user_id'] ?? null;
     }
 
@@ -80,6 +87,9 @@ class Auth
      */
     public static function user(): ?array
     {
+        if(self::$mock){
+            return self::$mockUser;
+        }
         $userId = self::id();
         if ($userId) {
             return (new \App\Models\User())->find($userId);
