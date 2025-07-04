@@ -1,11 +1,9 @@
 <?php
-/**
- * Instructions:
- * Run it from the command line: php create_database.php
- * After successful creation, immediately delete this file.
-*/
 
+use App\Core\Database;
 use App\Core\DotEnv;
+use PDO;
+use PDOException;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
