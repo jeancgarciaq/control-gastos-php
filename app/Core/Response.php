@@ -8,6 +8,8 @@ namespace App\Core;
  */
 class Response
 {
+    public static $mock = false;
+    public static $mockRedirectedTo = null;
     /**
      * Redirects the user to a different URL.
      *
@@ -16,6 +18,10 @@ class Response
      */
     public static function redirect(string $url)
     {
+        if(self::$mock){
+            self::$mockRedirectedTo = $url;
+            return;
+        }
         header("Location: " . $url);
         exit;
     }
