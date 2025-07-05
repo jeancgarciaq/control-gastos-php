@@ -9,6 +9,11 @@ namespace App\Core;
 class Request
 {
     /**
+     * @var array Almacena los parámetros extraídos de la ruta (ej. ['id' => 5]).
+    */
+    protected array $routeParams = [];
+
+    /**
      * Gets the URI of the request.
      *
      * @return string The URI.
@@ -51,5 +56,28 @@ class Request
         }
 
         return $body;
+    }
+
+    /**
+     * Guarda los parámetros de la ruta. Es usado por el Router.
+     *
+     * @param array $params
+     * @return void
+    */
+    public function setRouteParams(array $params): void
+    {
+        $this->routeParams = $params;
+    }
+
+    /**
+     * Obtiene un parámetro específico de la ruta por su nombre.
+     *
+     * @param string $paramName El nombre del parámetro (ej. 'id').
+     * @param mixed|null $default El valor a devolver si no se encuentra.
+     * @return mixed
+     */
+    public function getRouteParam(string $paramName, $default = null)
+    {
+        return $this->routeParams[$paramName] ?? $default;
     }
 }
