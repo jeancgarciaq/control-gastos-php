@@ -2,49 +2,56 @@
 
 namespace App\Controllers;
 
-use App\Core\View;
 use App\Core\Auth;
 use App\Core\Request;
 use App\Core\Response;
-use App\Requests\ExpenseRequest;
+use App\Core\View;
 use App\Models\Expense;
 use App\Models\Profile;
+use App\Requests\ExpenseRequest;
 use App\Services\BalanceService;
+use PDO;
 
 /**
  * Class ExpenseController
- * Handles expense-related requests (listing, creation, editing, showing).
- */
+ * Handles expense-related requests.
+*/
 class ExpenseController
 {
     /**
-     * @var BalanceService The balance calculation service.
-     */
+     * @var PDO The database connection object.
+    */
+    private PDO $pdo;
+
+    /**
+     * @var BalanceService The service for calculating balances.
+    */
     private BalanceService $balanceService;
 
     /**
      * ExpenseController constructor.
      *
-     * @param BalanceService|null $balanceService Optional balance service. If null, a new instance will be created.
-     */
-    public function __construct(BalanceService $balanceService = null)
+     * @param PDO $pdo The database connection object.
+    */
+    public function __construct(PDO $pdo)
     {
-        $this->balanceService = $balanceService ?? new BalanceService();
+        $this->pdo = $pdo;
+        $this->balanceService = new BalanceService($this->pdo);
     }
 
     /**
-     * Displays a list of expenses for the current user.
+     * Displays a list of all expenses for the user.
      *
      * @return void
-     */
+    */
     public function index()
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
+        if (Auth::guest()) Response::redirect('/login');
 
-        $expenses = (new Expense())->getAllForUser(Auth::id());
-        View::render('expenses/index', ['title' => 'Expenses', 'expenses' => $expenses]);
+        $expenseModel = new Expense($this->pdo);
+        $expenses = $expenseModel->getAllForUser(Auth::id());
+        
+        View::render('expenses/index', ['title' => 'My Expenses', 'expenses' => $expenses]);
     }
 
     /**
@@ -58,7 +65,7 @@ class ExpenseController
             Response::redirect('/login');
         }
 
-        $profiles = (new Profile())->getAllForUser(Auth::id());
+        $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
         View::render('expenses/create', ['title' => 'Create Expense', 'profiles' => $profiles]);
     }
 
@@ -78,12 +85,12 @@ class ExpenseController
         $expenseRequest = new ExpenseRequest();
 
         if (!$expenseRequest->validate($data)) {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('expenses/create', ['title' => 'Create Expense', 'errors' => $expenseRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
-        $expense = new Expense();
+        $expense = new Expense($this->pdo);
         $expense->date = $data['date'];
         $expense->description = $data['description'];
         $expense->amount = $data['amount'];
@@ -95,7 +102,7 @@ class ExpenseController
             $this->balanceService->updateProfileAssets($expense->profile_id);
             Response::redirect('/expenses');
         } else {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('expenses/create', ['title' => 'Create Expense', 'errors' => ['general' => ['Failed to create expense.']], 'data' => $data, 'profiles' => $profiles]);
         }
     }
@@ -107,17 +114,27 @@ class ExpenseController
      * @param int $id The ID of the expense to edit.
      * @return void
      */
-    public function edit(Request $request, int $id)
+    public function edit(Request $request)
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
 
-        $expense = (new Expense())->find($id);
-        if (!$expense || !(new Profile())->isOwnedByUser($expense['profile_id'], Auth::id())) {
-            Response::redirect('/expenses'); // or error
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
+
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
         }
-        $profiles = (new Profile())->getAllForUser(Auth::id());
+
+        $expenseModel = new Expense($this->pdo);
+        $expense = $expenseModel->find((int)$id);
+
+        if (!$expense || !(new Profile())->isOwnedByUser($expense['profile_id'], Auth::id())) {
+            Response::redirect('/expenses');
+        }
+        $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
         View::render('expenses/edit', ['title' => 'Edit Expense', 'expense' => $expense, 'profiles' => $profiles]);
     }
 
@@ -128,27 +145,37 @@ class ExpenseController
      * @param int $id The ID of the expense to update.
      * @return void
      */
-    public function update(Request $request, int $id)
+    public function update(Request $request)
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
-        $expense = (new Expense())->find($id);
+        
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
 
-        if (!$expense || !(new Profile())->isOwnedByUser($expense['profile_id'], Auth::id())) {
-            Response::redirect('/expenses'); // or error
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
+        }
+
+        $expenseModel = new Expense($this->pdo);
+        $expense = $expenseModel->find((int)$id);
+
+        if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
+            Response::redirect('/expenses');
         }
 
         $data = $request->getBody();
         $expenseRequest = new ExpenseRequest();
 
         if (!$expenseRequest->validate($data)) {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('expenses/edit', ['title' => 'Edit Expense', 'errors' => $expenseRequest->errors(), 'expense' => $expense, 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
-        $expense = new Expense();
+        $expense = new Expense($this->pdo);
         $expense->id = $id;
         $expense->date = $data['date'];
         $expense->description = $data['description'];
@@ -161,7 +188,7 @@ class ExpenseController
             $this->balanceService->updateProfileAssets($expense->profile_id);
             Response::redirect('/expenses');
         } else {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('expenses/edit', ['title' => 'Edit Expense', 'errors' => ['general' => ['Failed to update expense.']], 'expense' => $expense, 'data' => $data, 'profiles' => $profiles]);
         }
     }
@@ -172,14 +199,24 @@ class ExpenseController
      * @param int $id The ID of the expense to show.
      * @return void
      */
-    public function show(int $id)
+    public function show(Request $request)
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
 
-        $expense = (new Expense())->find($id);
-        if (!$expense || !(new Profile())->isOwnedByUser($expense['profile_id'], Auth::id())) {
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
+
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
+        }
+
+        $expenseModel = new Expense($this->pdo);
+        $expense = $expenseModel->find((int)$id);
+
+        if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
             Response::redirect('/expenses'); // or error
         }
 
@@ -193,28 +230,38 @@ class ExpenseController
      * @param int $id The ID of the expense to delete.
      * @return void
      */
-    public function destroy(Request $request, int $id): void
+    public function destroy(Request $request): void
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
+        
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
 
-        $expense = (new Expense())->find($id);
-        if (!$expense || !(new Profile())->isOwnedByUser($expense['profile_id'], Auth::id())) {
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
+        }
+
+        $expenseModel = new Expense($this->pdo);
+        $expense = $expenseModel->find((int)$id);
+
+        if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
             Response::redirect('/expenses'); // or error
         }
 
         //Delete the expense
-        $expense = new Expense();
+        $expense = new Expense($this->pdo);
         $expense->id = $id;
-        $profile_id = $expense->profile_id; //Get the profile_id to update the balance
+        $profile_id = $expense->profile_id;
         if ($this->deleteExpense($id)) {
             //Update the profile assets with the new balance
             $this->balanceService->updateProfileAssets($profile_id);
-            Response::redirect('/expenses'); //Redirect to expenses page or another appropriate page
+            Response::redirect('/expenses'); //Redirect to expenses page
         } else {
             //Handle the case where the delete fails
-            echo "Failed to delete expense."; //Or show an error message to the user
+            echo "Failed to delete expense.";
         }
     }
 
@@ -225,8 +272,7 @@ class ExpenseController
      */
     public function deleteExpense(int $id): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("DELETE FROM expenses WHERE id = :id");
+        $stmt = $$this->pdo->prepare("DELETE FROM expenses WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         return $stmt->execute();

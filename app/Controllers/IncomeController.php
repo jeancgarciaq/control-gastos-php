@@ -2,49 +2,56 @@
 
 namespace App\Controllers;
 
-use App\Core\View;
 use App\Core\Auth;
 use App\Core\Request;
 use App\Core\Response;
-use App\Requests\IncomeRequest;
+use App\Core\View;
 use App\Models\Income;
 use App\Models\Profile;
+use App\Requests\IncomeRequest;
 use App\Services\BalanceService;
+use PDO;
 
 /**
  * Class IncomeController
- * Handles income-related requests (listing, creation, editing, showing).
- */
+ * Handles income-related requests.
+*/
 class IncomeController
 {
     /**
-     * @var BalanceService The balance calculation service.
-     */
+     * @var PDO The database connection object.
+    */
+    private PDO $pdo;
+
+    /**
+     * @var BalanceService The service for calculating balances.
+    */
     private BalanceService $balanceService;
 
     /**
      * IncomeController constructor.
      *
-     * @param BalanceService|null $balanceService Optional balance service. If null, a new instance will be created.
-     */
-    public function __construct(BalanceService $balanceService = null)
+     * @param PDO $pdo The database connection object.
+    */
+    public function __construct(PDO $pdo)
     {
-        $this->balanceService = $balanceService ?? new BalanceService();
+        $this->pdo = $pdo;
+        $this->balanceService = new BalanceService($this->pdo);
     }
 
     /**
-     * Displays a list of income entries for the current user.
+     * Displays a list of all income for the user.
      *
      * @return void
-     */
+    */
     public function index()
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
+        if (Auth::guest()) Response::redirect('/login');
 
-        $income = (new Income())->getAllForUser(Auth::id());
-        View::render('income/index', ['title' => 'Income', 'income' => $income]);
+        $incomeModel = new Income($this->pdo);
+        $incomes = $incomeModel->getAllForUser(Auth::id());
+        
+        View::render('income/index', ['title' => 'My Income', 'income' => $incomes]);
     }
 
     /**
@@ -58,7 +65,7 @@ class IncomeController
             Response::redirect('/login');
         }
 
-        $profiles = (new Profile())->getAllForUser(Auth::id());
+        $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
         View::render('income/create', ['title' => 'Create Income', 'profiles' => $profiles]);
     }
 
@@ -78,12 +85,12 @@ class IncomeController
         $incomeRequest = new IncomeRequest();
 
         if (!$incomeRequest->validate($data)) {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('income/create', ['title' => 'Create Income', 'errors' => $incomeRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
-        $income = new Income();
+        $income = new Income($this->pdo);
         $income->date = $data['date'];
         $income->description = $data['description'];
         $income->amount = $data['amount'];
@@ -95,7 +102,7 @@ class IncomeController
             $this->balanceService->updateProfileAssets($income->profile_id);
             Response::redirect('/income');
         } else {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('income/create', ['title' => 'Create Income', 'errors' => ['general' => ['Failed to create income.']], 'data' => $data, 'profiles' => $profiles]);
         }
     }
@@ -107,17 +114,27 @@ class IncomeController
      * @param int $id The ID of the income entry to edit.
      * @return void
      */
-    public function edit(Request $request, int $id)
+    public function edit(Request $request)
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
 
-        $income = (new Income())->find($id);
-        if (!$income || !(new Profile())->isOwnedByUser($income['profile_id'], Auth::id())) {
-            Response::redirect('/income'); // or error
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
+
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
         }
-        $profiles = (new Profile())->getAllForUser(Auth::id());
+
+        $incomeModel = new Income($this->pdo);
+        $income = $incomeModel->find((int)$id);
+
+        if (!$income || !(new Profile($this->pdo))->isOwnedByUser($income['profile_id'], Auth::id())) {
+            Response::redirect('/income'); 
+        }
+        $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
         View::render('income/edit', ['title' => 'Edit Income', 'income' => $income, 'profiles' => $profiles]);
     }
 
@@ -128,27 +145,37 @@ class IncomeController
      * @param int $id The ID of the income entry to update.
      * @return void
      */
-    public function update(Request $request, int $id)
+    public function update(Request $request)
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
-        $income = (new Income())->find($id);
+        
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
 
-        if (!$income || !(new Profile())->isOwnedByUser($income['profile_id'], Auth::id())) {
-            Response::redirect('/income'); // or error
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
+        }
+
+        $incomeModel = new Income($this->pdo);
+        $income = $incomeModel->find((int)$id);
+
+        if (!$income || !(new Profile($this->pdo))->isOwnedByUser($income['profile_id'], Auth::id())) {
+            Response::redirect('/income');
         }
 
         $data = $request->getBody();
         $incomeRequest = new IncomeRequest();
 
         if (!$incomeRequest->validate($data)) {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('income/edit', ['title' => 'Edit Income', 'errors' => $incomeRequest->errors(), 'income' => $income, 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
-        $income = new Income();
+        $income = new Income($this->pdo);
         $income->id = $id;
         $income->date = $data['date'];
         $income->description = $data['description'];
@@ -161,7 +188,7 @@ class IncomeController
             $this->balanceService->updateProfileAssets($income->profile_id);
             Response::redirect('/income');
         } else {
-            $profiles = (new Profile())->getAllForUser(Auth::id());
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             View::render('income/edit', ['title' => 'Edit Income', 'errors' => ['general' => ['Failed to update income.']], 'income' => $income, 'data' => $data, 'profiles' => $profiles]);
         }
     }
@@ -172,15 +199,25 @@ class IncomeController
      * @param int $id The ID of the income entry to show.
      * @return void
      */
-    public function show(int $id)
+    public function show(Request $request)
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
+        
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
 
-        $income = (new Income())->find($id);
-        if (!$income || !(new Profile())->isOwnedByUser($income['profile_id'], Auth::id())) {
-            Response::redirect('/income'); // or error
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
+        }
+
+        $incomeModel = new Income($this->pdo);
+        $income = $incomeModel->find((int)$id);
+
+        if (!$income || !(new Profile($this->pdo))->isOwnedByUser($income['profile_id'], Auth::id())) {
+            Response::redirect('/income');
         }
 
         View::render('income/show', ['title' => 'Income Details', 'income' => $income]);
@@ -192,29 +229,39 @@ class IncomeController
      * @param Request $request The request object.
      * @param int $id The ID of the income to delete.
      * @return void
-     */
-    public function destroy(Request $request, int $id): void
+    */
+    public function destroy(Request $request): void
     {
         if (Auth::guest()) {
             Response::redirect('/login');
         }
+        
+        // Obtiene el 'id' de la ruta usando el nuevo método
+        $id = $request->getRouteParam('id');
 
-        $income = (new Income())->find($id);
-        if (!$income || !(new Profile())->isOwnedByUser($income['profile_id'], Auth::id())) {
+        if (!$id) {
+            // Manejar error si no hay ID
+            Response::redirect('/dashboard');
+        }
+
+        $incomeModel = new Income($this->pdo);
+        $income = $incomeModel->find((int)$id);
+
+        if (!$income || !(new Profile($this->pdo))->isOwnedByUser($income['profile_id'], Auth::id())) {
             Response::redirect('/income'); // or error
         }
 
         //Delete the income
-        $income = new Income();
+        $income = new Income($this->pdo);
         $income->id = $id;
         $profile_id = $income->profile_id; //Get the profile_id to update the balance
         if ($this->deleteIncome($id)) {
             //Update the profile assets with the new balance
             $this->balanceService->updateProfileAssets($profile_id);
-            Response::redirect('/income'); //Redirect to income page or another appropriate page
+            Response::redirect('/income');
         } else {
             //Handle the case where the delete fails
-            echo "Failed to delete income."; //Or show an error message to the user
+            echo "Failed to delete income.";
         }
     }
 
@@ -225,8 +272,7 @@ class IncomeController
      */
     public function deleteIncome(int $id): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("DELETE FROM income WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM income WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         return $stmt->execute();
