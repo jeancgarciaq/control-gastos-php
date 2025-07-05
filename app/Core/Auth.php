@@ -2,6 +2,8 @@
 
 namespace App\Core;
 
+use PDO;
+
 class Auth
 {
     public static $mock = false;
@@ -16,9 +18,9 @@ class Auth
      * @param string $password The password.
      * @return bool True if authentication is successful, false otherwise.
      */
-    public static function attempt(string $username, string $password): bool
+    public static function attempt(string $username, string $password, PDO $pdo): bool
     {
-        $user = (new \App\Models\User())->findByUsername($username);
+        $user = (new \App\Models\User($this->pdo))->findByUsername($username);
 
         if ($user && password_verify($password, $user['password'])) {
             // Generate a token (simplified for now)
