@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Core\Database;
 use PDO;
 
 /**
@@ -11,6 +10,12 @@ use PDO;
  */
 class Expense
 {
+
+    /**
+     * @var PDO The database connection object.
+     */
+    private PDO $pdo;
+
     /** @var int|null The expense ID. Null if the expense hasn't been saved to the database yet. */
     public ?int $id = null;
 
@@ -30,6 +35,16 @@ class Expense
     public int $profile_id;
 
     /**
+     * Expense constructor.
+     *
+     * @param PDO $pdo The database connection object.
+     */
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
+    /**
      * Creates a new expense in the database.
      * Sets the ID of the expense object if creation is successful.
      *
@@ -37,8 +52,7 @@ class Expense
      */
     public function create(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("INSERT INTO expenses (date, description, amount, type, profile_id) VALUES (:date, :description, :amount, :type, :profile_id)");
+        $stmt = $this->pdo->prepare("INSERT INTO expenses (date, description, amount, type, profile_id) VALUES (:date, :description, :amount, :type, :profile_id)");
         $stmt->bindValue(':date', $this->date);
         $stmt->bindValue(':description', $this->description);
         $stmt->bindValue(':amount', $this->amount);
@@ -48,7 +62,7 @@ class Expense
         $result = $stmt->execute();
 
         if ($result) {
-            $this->id = (int)$db->lastInsertId(); //Set the ID after successful creation
+            $this->id = (int)$this->pdo->lastInsertId();
         }
 
         return $result;
@@ -62,8 +76,7 @@ class Expense
      */
     public function find(int $id): mixed
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM expenses WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT * FROM expenses WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -77,8 +90,7 @@ class Expense
      */
     public function update(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("UPDATE expenses SET date = :date, description = :description, amount = :amount, type = :type, profile_id = :profile_id WHERE id = :id");
+        $stmt = $this->pdo->prepare("UPDATE expenses SET date = :date, description = :description, amount = :amount, type = :type, profile_id = :profile_id WHERE id = :id");
         $stmt->bindValue(':date', $this->date);
         $stmt->bindValue(':description', $this->description);
         $stmt->bindValue(':amount', $this->amount);
@@ -97,8 +109,7 @@ class Expense
      */
     public function getAllForUser(int $userId): array
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT expenses.* FROM expenses INNER JOIN profile ON expenses.profile_id = profile.id WHERE profile.user_id = :user_id");
+        $stmt = $this->pdo->prepare("SELECT expenses.* FROM expenses INNER JOIN profile ON expenses.profile_id = profile.id WHERE profile.user_id = :user_id");
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -112,8 +123,7 @@ class Expense
      */
     public function deleteExpense(int $id): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("DELETE FROM expenses WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM expenses WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         return $stmt->execute();

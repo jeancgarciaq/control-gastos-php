@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Core\Database;
 use PDO;
 
 /**
@@ -11,6 +10,11 @@ use PDO;
  */
 class Profile
 {
+    /**
+     * @var PDO The database connection object.
+     */
+    private PDO $pdo;
+
     /** @var int|null The profile ID. Null if the profile hasn't been saved to the database yet. */
     public ?int $id = null;
 
@@ -39,14 +43,23 @@ class Profile
     public float $initial_balance;
 
     /**
+     * Profile constructor.
+     *
+     * @param PDO $pdo The database connection object.
+     */
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
+    /**
      * Creates a new profile in the database.
      *  Sets the ID of the profile object if creation is successful.
      * @return bool True on success, false on failure.
      */
     public function create(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("INSERT INTO profile (name, phone, position_or_company, marital_status, children, assets, initial_balance, user_id) VALUES (:name, :phone, :position_or_company, :marital_status, :children, :assets, :initial_balance, :user_id)");
+        $stmt = $this->pdo->prepare("INSERT INTO profile (name, phone, position_or_company, marital_status, children, assets, initial_balance, user_id) VALUES (:name, :phone, :position_or_company, :marital_status, :children, :assets, :initial_balance, :user_id)");
         $stmt->bindValue(':name', $this->name);
         $stmt->bindValue(':phone', $this->phone);
         $stmt->bindValue(':position_or_company', $this->position_or_company);
@@ -59,7 +72,7 @@ class Profile
         $result = $stmt->execute();
 
         if ($result) {
-            $this->id = (int)$db->lastInsertId(); //Set the ID after successful creation
+            $this->id = (int)$this->pdo->lastInsertId();
         }
 
         return $result;
@@ -73,8 +86,7 @@ class Profile
      */
     public function find(int $id): mixed
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM profile WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -88,8 +100,7 @@ class Profile
      */
     public function update(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("UPDATE profile SET name = :name, phone = :phone, position_or_company = :position_or_company, marital_status = :marital_status, children = :children, assets = :assets, initial_balance = :initial_balance, user_id = :user_id WHERE id = :id");
+        $stmt = $this->pdo->prepare("UPDATE profile SET name = :name, phone = :phone, position_or_company = :position_or_company, marital_status = :marital_status, children = :children, assets = :assets, initial_balance = :initial_balance, user_id = :user_id WHERE id = :id");
         $stmt->bindValue(':name', $this->name);
         $stmt->bindValue(':phone', $this->phone);
         $stmt->bindValue(':position_or_company', $this->position_or_company);
@@ -111,8 +122,7 @@ class Profile
      */
     public function getAllForUser(int $userId): array
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM profile WHERE user_id = :user_id");
+        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE user_id = :user_id");
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -128,8 +138,7 @@ class Profile
      */
     public function isOwnedByUser(int $profileId, int $userId): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT COUNT(*) FROM profile WHERE id = :id AND user_id = :user_id");
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM profile WHERE id = :id AND user_id = :user_id");
         $stmt->bindValue(':id', $profileId, PDO::PARAM_INT);
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();

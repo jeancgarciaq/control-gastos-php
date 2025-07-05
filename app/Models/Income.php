@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Core\Database;
 use PDO;
 
 /**
@@ -11,6 +10,11 @@ use PDO;
  */
 class Income
 {
+    /**
+     * @var PDO The database connection object.
+     */
+    private PDO $pdo;
+
     /** @var int|null The income ID. Null if the income hasn't been saved to the database yet. */
     public ?int $id = null;
 
@@ -30,6 +34,16 @@ class Income
     public int $profile_id;
 
     /**
+     * Income constructor.
+     *
+     * @param PDO $pdo The database connection object.
+     */
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
+    /**
      * Creates a new income in the database.
      * Sets the ID of the income object if creation is successful.
      *
@@ -37,8 +51,7 @@ class Income
      */
     public function create(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("INSERT INTO income (date, description, amount, type, profile_id) VALUES (:date, :description, :amount, :type, :profile_id)");
+        $stmt = $this->pdo->prepare("INSERT INTO income (date, description, amount, type, profile_id) VALUES (:date, :description, :amount, :type, :profile_id)");
         $stmt->bindValue(':date', $this->date);
         $stmt->bindValue(':description', $this->description);
         $stmt->bindValue(':amount', $this->amount);
@@ -48,7 +61,7 @@ class Income
         $result = $stmt->execute();
 
         if ($result) {
-            $this->id = (int)$db->lastInsertId(); //Set the ID after successful creation
+            $this->id = (int)$this->pdo->lastInsertId(); 
         }
 
         return $result;
@@ -62,8 +75,7 @@ class Income
      */
     public function find(int $id): mixed
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM income WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT * FROM income WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -77,8 +89,7 @@ class Income
      */
     public function update(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("UPDATE income SET date = :date, description = :description, amount = :amount, type = :type, profile_id = :profile_id WHERE id = :id");
+        $stmt = $this->pdo->prepare("UPDATE income SET date = :date, description = :description, amount = :amount, type = :type, profile_id = :profile_id WHERE id = :id");
         $stmt->bindValue(':date', $this->date);
         $stmt->bindValue(':description', $this->description);
         $stmt->bindValue(':amount', $this->amount);
@@ -97,8 +108,7 @@ class Income
      */
     public function getAllForUser(int $userId): array
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT income.* FROM income INNER JOIN profile ON income.profile_id = profile.id WHERE profile.user_id = :user_id");
+        $stmt = $this->pdo->prepare("SELECT income.* FROM income INNER JOIN profile ON income.profile_id = profile.id WHERE profile.user_id = :user_id");
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -112,8 +122,7 @@ class Income
      */
     public function deleteIncome(int $id): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("DELETE FROM income WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM income WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         return $stmt->execute();

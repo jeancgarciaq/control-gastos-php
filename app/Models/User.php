@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Core\Database;
 use PDO;
 
 /**
@@ -11,6 +10,11 @@ use PDO;
  */
 class User
 {
+     /**
+     * @var PDO The database connection object.
+     */
+    private PDO $pdo;
+
     /** @var int|null The user ID. Null if the user hasn't been saved to the database yet. */
     public ?int $id = null;
 
@@ -23,6 +27,16 @@ class User
     /** @var string The password (hashed). */
     public string $password;
 
+     /**
+     * Income constructor.
+     *
+     * @param PDO $pdo The database connection object.
+    */
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
     /**
      * Creates a new user in the database.
      * Sets the ID of the user object if creation is successful.
@@ -31,8 +45,7 @@ class User
      */
     public function create(): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("INSERT INTO user (username, email, password) VALUES (:username, :email, :password)");
+        $stmt = $this->pdo->prepare("INSERT INTO user (username, email, password) VALUES (:username, :email, :password)");
         $stmt->bindValue(':username', $this->username);
         $stmt->bindValue(':email', $this->email);
         $stmt->bindValue(':password', $this->password);
@@ -40,7 +53,7 @@ class User
         $result = $stmt->execute();
 
         if ($result) {
-            $this->id = (int)$db->lastInsertId(); //Set the ID after successful creation
+            $this->id = (int)$this->pdo->lastInsertId();
         }
 
         return $result;
@@ -54,8 +67,7 @@ class User
      */
     public function find(int $id): mixed
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM user WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT * FROM user WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -70,8 +82,7 @@ class User
      */
     public function findByUsername(string $username): mixed
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM user WHERE username = :username");
+        $stmt = $this->pdo->prepare("SELECT * FROM user WHERE username = :username");
         $stmt->bindValue(':username', $username);
         $stmt->execute();
 
@@ -87,8 +98,7 @@ class User
      */
     public function deleteUser(int $id): bool
     {
-        $db = Database::getInstance();
-        $stmt = $db->prepare("DELETE FROM user WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM user WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         return $stmt->execute();
