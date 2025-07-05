@@ -1,15 +1,25 @@
 <?php
 
+// 1. AUTOLOADING Y NAMESPACES
+use App\Core\Environment;
 use App\Core\Router;
 use App\Core\Request;
-use App\Core\DotEnv;
+use App\Core\Database; 
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Load environment variables
-(new DotEnv(__DIR__ . '/../.env'))->load();
 
-// Instantiate the Router
+// 2. INICIALIZACIÓN DE DEPENDENCIAS CENTRALES
+// Se crea el objeto de entorno UNA SOLA VEZ.
+$env = new Environment(__DIR__ . '/..');
+
+// Se obtiene la instancia de la base de datos, INYECTANDO el objeto de entorno.
+$pdo = Database::getInstance($env);
+
+
+// 3. REGISTRO DE RUTAS
+// Creamos el Router. En un futuro, podrías pasarle $pdo al router si fuera
+// necesario, para que él lo inyecte en los controladores.
 $router = new Router(new Request());
 
 // Define routes (example - adjust as needed)
@@ -47,5 +57,6 @@ $router->post('/income/{id}/edit', 'IncomeController@update');
 $router->get('/income/{id}', 'IncomeController@show');
 $router->post('/income/{id}/delete', 'IncomeController@destroy'); //Simulate DELETE request
 
-// Run the router
-$router->resolve();
+// 4. RESOLUCIÓN DE LA RUTA
+// Se llama al método resolve en la ÚNICA instancia del router que hemos creado y llenado.
+$router->resolve($pdo);
