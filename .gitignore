@@ -1,0 +1,12 @@
+#Variables de entorno
+.env
+
+#Modulos composer
+vendor
+
+#Modulos node
+node_modules
+
+#Cache de phpunit
+.phpunit.result.cache
+build
