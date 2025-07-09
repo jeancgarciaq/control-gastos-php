@@ -10,3 +10,6 @@ node_modules
 #Cache de phpunit
 .phpunit.result.cache
 build
+
+#Build artifacts
+public/output.css
