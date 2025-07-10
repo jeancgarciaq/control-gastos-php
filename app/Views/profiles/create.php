@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link href="../output.css" rel="stylesheet">
+    <link href="/output.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 h-screen flex items-center justify-center">
 

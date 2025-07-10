@@ -10,7 +10,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link href="../output.css" rel="stylesheet">
+    <link href="/output.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
 
@@ -18,7 +18,7 @@
         <h1 class="text-3xl font-bold text-gray-800 mb-4">My Profiles</h1>
 
         <div class="mb-4">
-            <a href="/profile/create" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <a href="/profiles/create" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Create New Profile
             </a>
         </div>
@@ -34,9 +34,9 @@
                             <?= htmlspecialchars($profile['position_or_company']) ?>
                         </p>
                         <div class="mt-2">
-                            <a href="/profile/<?= htmlspecialchars($profile['id']) ?>" class="text-blue-500 hover:text-blue-700 mr-2">View</a>
-                            <a href="/profile/<?= htmlspecialchars($profile['id']) ?>/edit" class="text-green-500 hover:text-green-700 mr-2">Edit</a>
-                            <form action="/profile/<?= htmlspecialchars($profile['id']) ?>/delete" method="post" class="inline">
+                            <a href="/profiles/<?= htmlspecialchars($profile['id']) ?>" class="text-blue-500 hover:text-blue-700 mr-2">View</a>
+                            <a href="/profiles/<?= htmlspecialchars($profile['id']) ?>/edit" class="text-green-500 hover:text-green-700 mr-2">Edit</a>
+                            <form action="/profiles/<?= htmlspecialchars($profile['id']) ?>/delete" method="post" class="inline">
                                 <input type="hidden" name="_method" value="DELETE">
                                 <button type="submit" class="text-red-500 hover:text-red-700" onclick="return confirm('Are you sure you want to delete this profile?')">Delete</button>
                             </form>

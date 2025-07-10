@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link href="../output.css" rel="stylesheet">
+    <link href="/output.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 h-screen flex items-center justify-center">
 
@@ -32,7 +32,7 @@
             </div>
         <?php endif; ?>
 
-        <form method="post" action="/profile/<?= htmlspecialchars($profile['id']) ?>/edit">
+        <form method="post" action="/profiles/<?= htmlspecialchars($profile['id']) ?>/edit">
             <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="name">
                     Name

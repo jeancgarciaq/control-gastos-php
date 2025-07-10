@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link href="./output.css" rel="stylesheet">
+    <link href="/output.css" rel="stylesheet">
     <!-- Se añade la Site Key al script de reCAPTCHA -->
     <?php if (!empty($siteKey)): ?>
         <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($siteKey) ?>" async defer></script>
