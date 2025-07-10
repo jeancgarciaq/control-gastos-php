@@ -83,4 +83,23 @@ class Auth
     {
         return $_SESSION['user_id'] ?? null;
     }
+
+    /**
+     * Obtiene los datos completos del usuario autenticado.
+     *
+     * @param PDO $pdo La instancia de conexión a la base de datos.
+     * @return array|null Un array asociativo con los datos del usuario, o null si no está logueado.
+     */
+    public static function user(PDO $pdo): ?array
+    {
+        // Si no hay un usuario logueado, devuelve null.
+        if (!self::check()) {
+            return null;
+        }
+
+        // Crea una instancia del modelo User y busca al usuario por su ID.
+        // (Asume que tu modelo User tiene un método find($id)).
+        $userModel = new User($pdo);
+        return $userModel->find(self::id());
+    }
 }
