@@ -18,6 +18,7 @@ use App\Controllers\ExpenseController;
 use App\Controllers\HomeController;
 use App\Controllers\IncomeController;
 use App\Controllers\ProfileController;
+use App\Controllers\UserController;
 
 // NOTA: La variable $router ya existe, fue creada en public/index.php.
 // Aquí solo la utilizamos para definir las rutas.
@@ -41,6 +42,9 @@ $router->post('/profiles/{id}/edit', [ProfileController::class, 'update']);
 $router->get('/profiles/{id}', [ProfileController::class, 'show']);
 $router->post('/profiles/{id}/delete', [ProfileController::class, 'destroy']); // Simula la petición DELETE
 
+// Rutas para la gestión de la cuenta de usuario (desde la vista de perfil)
+$router->post('/user/update', [UserController::class, 'update']);
+$router->post('/user/password/update', [UserController::class, 'updatePassword']);
 
 // --- Rutas de Gastos (Expense) ---
 $router->get('/expenses', [ExpenseController::class, 'index']);
