@@ -3,7 +3,7 @@
  * @file AuthController.php
  * @package App\Controllers
  * @author Jean Carlo Garcia
- * @version 1.0
+ * @version 1.1
  * @brief Controlador para gestionar la autenticación de usuarios.
  */
 
@@ -154,20 +154,41 @@ class AuthController
         $data = $request->getBody();
         $loginRequest = new LoginRequest();
 
+        // 1. Validar los datos del formulario
         if (!$loginRequest->validate($data)) {
-            View::render('auth/login', ['title' => 'Login', 'errors' => $loginRequest->errors(), 'data' => $data, 'siteKey' => ReCaptcha::getSiteKey()]);
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'errors' => $loginRequest->errors()], 422);
+            } else {
+                View::render('auth/login', ['title' => 'Login', 'errors' => $loginRequest->errors(), 'data' => $data, 'siteKey' => ReCaptcha::getSiteKey()]);
+            }
             return;
         }
         
+        // 2. Validar el token de reCAPTCHA
         if (!ReCaptcha::verify($data['g-recaptcha-response'] ?? '')) {
-            View::render('auth/login', ['title' => 'Login', 'errors' => ['recaptcha' => ['reCAPTCHA verification failed.']], 'data' => $data, 'siteKey' => ReCaptcha::getSiteKey()]);
+            $error = ['recaptcha' => ['reCAPTCHA verification failed. Please try again.']];
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'errors' => $error], 403);
+            } else {
+                View::render('auth/login', ['title' => 'Login', 'errors' => $error, 'data' => $data, 'siteKey' => ReCaptcha::getSiteKey()]);
+            }
             return;
         }
 
+        // 3. Intentar autenticar al usuario
         if (Auth::attempt($data['username'], $data['password'], $this->pdo)) {
-            Response::redirect('/dashboard');
+            if ($request->isAjax()) {
+                Response::json(['success' => true, 'redirect' => '/dashboard']);
+            } else {
+                Response::redirect('/dashboard');
+            }
         } else {
-            View::render('auth/login', ['title' => 'Login', 'errors' => ['general' => ['Invalid username or password.']], 'data' => $data, 'siteKey' => ReCaptcha::getSiteKey()]);
+            $error = ['general' => ['Invalid username or password.']];
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'errors' => $error], 401);
+            } else {
+                View::render('auth/login', ['title' => 'Login', 'errors' => $error, 'data' => $data, 'siteKey' => ReCaptcha::getSiteKey()]);
+            }
         }
     }
 
