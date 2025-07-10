@@ -1,78 +1,66 @@
 <?php
+/**
+ * @file Request.php
+ * @package App\Core
+ * @author jeancgarciaq
+ * @version 1.0
+ * @date 2025-07-10
+ * @brief Clase para encapsular la información de la petición HTTP, incluyendo parámetros de ruta.
+ */
 
 namespace App\Core;
 
-/**
- * Class Request
- * Represents an HTTP request.
- */
 class Request
 {
     /**
-     * @var array Almacena los parámetros extraídos de la ruta (ej. ['id' => 5]).
-    */
-    protected array $routeParams = [];
+     * @var array Almacena los parámetros de la ruta extraídos por el Router (ej: ['id' => 1]).
+     */
+    private array $routeParams = [];
 
     /**
-     * Gets the URI of the request.
-     *
-     * @return string The URI.
+     * Obtiene la ruta de la URI de la petición.
+     * @return string La ruta limpia, ej: "/profiles/1".
      */
-     public function getUri(): string
+    public function getPath(): string
     {
-        $uri = $_SERVER['REQUEST_URI'];
-        $uri = strtok($uri, '?');
-        // Quitamos la barra final
-        $uri = rtrim($uri, '/');
-
-        // Si era exactamente "/", al quitar la slash queda vacío
-        if ($uri === '') {
-            return '/';
-        }
-
-        return $uri;
+        return parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
     }
 
-
     /**
-     * Gets the HTTP method of the request (GET, POST, etc.).
-     *
-     * @return string The HTTP method.
+     * Obtiene el método HTTP de la petición en minúsculas.
+     * @return string 'get', 'post', etc.
      */
     public function getMethod(): string
     {
-        return $_SERVER['REQUEST_METHOD'];
+        return strtolower($_SERVER['REQUEST_METHOD']);
     }
 
     /**
-     * Gets the request body (POST or GET data).
-     *
-     * @return array An associative array of request parameters.
+     * Obtiene los datos del cuerpo de la petición (GET o POST) de forma segura.
+     * @return array Los datos saneados.
      */
     public function getBody(): array
     {
         $body = [];
-        if ($this->getMethod() === 'GET') {
+        if ($this->getMethod() === 'get') {
             foreach ($_GET as $key => $value) {
                 $body[$key] = filter_input(INPUT_GET, $key, FILTER_SANITIZE_SPECIAL_CHARS);
             }
         }
-
-        if ($this->getMethod() === 'POST') {
+        if ($this->getMethod() === 'post') {
             foreach ($_POST as $key => $value) {
                 $body[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
             }
         }
-
         return $body;
     }
 
     /**
-     * Guarda los parámetros de la ruta. Es usado por el Router.
+     * Establece los parámetros de la ruta que el Router ha extraído.
+     * Este método es llamado por el Router.
      *
-     * @param array $params
-     * @return void
-    */
+     * @param array $params Los parámetros clave-valor extraídos de la URL.
+     */
     public function setRouteParams(array $params): void
     {
         $this->routeParams = $params;
@@ -81,22 +69,24 @@ class Request
     /**
      * Obtiene un parámetro específico de la ruta por su nombre.
      *
-     * @param string $paramName El nombre del parámetro (ej. 'id').
-     * @param mixed|null $default El valor a devolver si no se encuentra.
-     * @return mixed
+     * @param string $param El nombre del parámetro (ej: 'id').
+     * @return mixed|null El valor del parámetro o null si no existe.
      */
-    public function getRouteParam(string $paramName, $default = null)
+    public function getRouteParam(string $param)
     {
-        return $this->routeParams[$paramName] ?? $default;
+        return $this->routeParams[$param] ?? null;
     }
 
     /**
-     * Determines if the request is an AJAX request.
+     * @brief Verifica si la petición actual es una petición AJAX.
+     * @description Este método comprueba la existencia y el valor del encabezado HTTP 'X-Requested-With',
+     * que es el estándar utilizado por la mayoría de las librerías JavaScript (como jQuery, Axios, etc.)
+     * para identificar llamadas asíncronas.
      *
-     * @return bool
+     * @return bool True si es una petición AJAX, false en caso contrario.
     */
     public function isAjax(): bool
     {
-        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
 }
