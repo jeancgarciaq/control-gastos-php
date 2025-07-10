@@ -92,7 +92,7 @@ class Profile
      *
      * @param int $id El ID del perfil.
      * @return array|false Un array con los datos del perfil, o false si no se encuentra.
-     */
+    */
     public function find(int $id): array|false
     {
         $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE id = :id");
@@ -129,5 +129,18 @@ class Profile
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
         return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * @brief Encuentra un perfil basado en el ID del usuario propietario.
+     * @param int $userId El ID del usuario.
+     * @return array|false Los datos del perfil o false si no se encuentra.
+     */
+    public function findByUserId(int $userId): array|false
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE user_id = :user_id LIMIT 1");
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
