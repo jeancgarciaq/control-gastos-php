@@ -49,6 +49,17 @@ class Router
      * Registers a POST route.
      *
      * @param string $uri The URI to match.
+     * @param string $controllerAction The controller@action string.
+     */
+    public function post(string $uri, string $controllerAction): void
+    {
+        $this->routes['POST'][$uri] = $controllerAction;
+    }
+
+    /**
+     * Registers a POST route.
+     *
+     * @param string $uri The URI to match.
      * @param string $controllerAction The controller and action to execute (e.g., "AuthController@processLogin").
      * @return void
      */
