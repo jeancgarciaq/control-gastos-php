@@ -27,7 +27,7 @@
                     <a href="/expenses" class="block">Expenses</a>
                 </li>
                 <li class="px-4 py-2 hover:bg-gray-700">
-                    <a href="/income" class="block">Income</a>
+                    <a href="/incomes" class="block">Income</a>
                 </li>
                 <li class="px-4 py-2 hover:bg-gray-700">
                     <a href="/logout" class="block">Logout</a>
