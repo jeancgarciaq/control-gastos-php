@@ -25,4 +25,19 @@ class Response
         header("Location: " . $url);
         exit;
     }
+
+    /**
+     * Sends a JSON response.
+     *
+     * @param array $data The data to be sent as JSON.
+     * @param int $statusCode The HTTP status code (default is 200).
+     * @return void
+    */
+    public static function json(array $data, int $statusCode = 200): void
+    {
+        header('Content-Type: application/json');
+        http_response_code($statusCode);
+        echo json_encode($data);
+        exit;
+    }
 }
