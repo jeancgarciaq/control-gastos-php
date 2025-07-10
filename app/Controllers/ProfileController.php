@@ -15,6 +15,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Models\Profile;
+use App\Models\User;
 
 /**
  * Class ProfileController
@@ -125,6 +126,39 @@ class ProfileController extends AuthenticatedController
             $profileData = (array) $profile;
             View::render('profiles/edit', ['title' => 'Editar Perfil', 'profile' => $profileData, 'error' => 'No se pudo actualizar el perfil.']);
         }
+    }
+
+
+    /**
+     * Muestra un perfil financiero específico y la configuración de la cuenta del usuario.
+     *
+     * @param Request $request La petición HTTP, usada para obtener el ID de la ruta.
+     * @return void
+     */
+    public function show(Request $request): void
+    {
+        // Ahora getRouteParam('id') devolverá el valor correcto (ej: 1)
+        $id = (int)$request->getRouteParam('id');
+        $profileModel = new Profile($this->pdo);
+
+        // find($id) ahora buscará el perfil correcto.
+        $profile = $profileModel->find($id);
+
+        // La condición de seguridad ahora funcionará como se espera.
+        // Se usa (int) por seguridad, para asegurar la comparación de tipos.
+        if (!$profile || (int)$profile['user_id'] !== Auth::id()) {
+            Response::redirect('/profiles', ['error' => 'Acceso denegado. No tienes permiso para ver este perfil.']);
+            return;
+        }
+
+        // Si la autorización es exitosa, se renderiza la vista.
+        $user = Auth::user($this->pdo);
+
+        View::render('profiles/show', [
+            'title' => 'Detalles del Perfil: ' . htmlspecialchars($profile['name']),
+            'profile' => $profile,
+            'user' => $user
+        ]);
     }
 
     /**
