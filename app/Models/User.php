@@ -6,53 +6,49 @@ use PDO;
 
 /**
  * Class User
- * Represents a user.
+ * Representa y gestiona los datos de un usuario en la base de datos.
  */
 class User
 {
-     /**
-     * @var PDO The database connection object.
-     */
     private PDO $pdo;
-
-    /** @var int|null The user ID. Null if the user hasn't been saved to the database yet. */
     public ?int $id = null;
-
-    /** @var string The username. */
     public string $username;
-
-    /** @var string The email address. */
     public string $email;
-
-    /** @var string The password (hashed). */
     public string $password;
 
-     /**
-     * Income constructor.
-     *
-     * @param PDO $pdo The database connection object.
-    */
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
     }
 
     /**
-     * Creates a new user in the database.
-     * Sets the ID of the user object if creation is successful.
+     * Guarda el usuario actual en la base de datos.
+     * Si el usuario no tiene ID, lo crea. Si ya tiene ID, lo actualiza.
      *
-     * @return bool True on success, false on failure.
+     * @return bool True en éxito, false en fallo.
      */
-    public function create(): bool
+    public function save(): bool
     {
-        $stmt = $this->pdo->prepare("INSERT INTO users (username, email, password) VALUES (:username, :email, :password)");
+        if ($this->id === null) {
+            // Lógica de creación
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO users (username, email, password) VALUES (:username, :email, :password)"
+            );
+        } else {
+            // Lógica de actualización
+            $stmt = $this->pdo->prepare(
+                "UPDATE users SET username = :username, email = :email, password = :password WHERE id = :id"
+            );
+            $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+        }
+
         $stmt->bindValue(':username', $this->username);
         $stmt->bindValue(':email', $this->email);
         $stmt->bindValue(':password', $this->password);
 
         $result = $stmt->execute();
 
-        if ($result) {
+        if ($result && $this->id === null) {
             $this->id = (int)$this->pdo->lastInsertId();
         }
 
@@ -60,62 +56,60 @@ class User
     }
 
     /**
-     * Finds a user by its ID.
+     * Elimina el usuario actual de la base de datos.
+     * Solo funciona si el objeto tiene un ID.
      *
-     * @param int $id The user ID.
-     * @return mixed An array containing the user data, or false if not found.
+     * @return bool True en éxito, false en fallo.
      */
-    public function find(int $id): mixed
+    public function delete(): bool
+    {
+        if ($this->id === null) {
+            return false; // No se puede borrar un usuario que no existe en la BD.
+        }
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id");
+        $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    /**
+     * Busca un usuario por su ID.
+     *
+     * @param int $id El ID del usuario.
+     * @return array|false Un array con los datos del usuario, o false si no se encuentra.
+     */
+    public function find(int $id): array|false
     {
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
-
-        return $stmt->fetch();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Finds a user by its username.
+     * Busca un usuario por su nombre de usuario.
      *
-     * @param string $username The username.
-     * @return mixed An array containing the user data, or false if not found.
+     * @param string $username El nombre de usuario.
+     * @return array|false Un array con los datos del usuario, o false si no se encuentra.
      */
-    public function findByUsername(string $username): mixed
+    public function findByUsername(string $username): array|false
     {
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE username = :username");
         $stmt->bindValue(':username', $username);
         $stmt->execute();
-
-        return $stmt->fetch();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Finds a user by its email.
+     * Busca un usuario por su email.
      *
-     * @param string $email The email.
-     * @return mixed An array containing the user data, or false if not found.
+     * @param string $email El email.
+     * @return array|false Un array con los datos del usuario, o false si no se encuentra.
      */
-    public function findByEmail(string $email): mixed
+    public function findByEmail(string $email): array|false
     {
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = :email");
         $stmt->bindValue(':email', $email);
         $stmt->execute();
-
-        return $stmt->fetch();
-    }
-
-    //You might add update() and delete() methods here if needed
-
-    /**
-     * Delete income from database
-     * @param int $id
-     * @return bool
-     */
-    public function deleteUser(int $id): bool
-    {
-        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-
-        return $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
