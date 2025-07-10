@@ -30,7 +30,6 @@ class RegisterRequest
             'username' => 'required|min:3',
             'email' => 'required|email',
             'password' => 'required|min:6',
-            'g-recaptcha-response' => 'required', // Add this line
         ];
 
         if (!$this->validator->validate($data, $rules)) {
