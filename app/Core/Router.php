@@ -7,11 +7,12 @@ use PDO;
 /**
  * Class Router
  * Handles incoming requests and dispatches them to the appropriate controller action.
+ * This version is refactored to be self-contained and use modern syntax.
  */
 class Router
 {
     /**
-     * @var array The routes defined for the application.  Organized by HTTP method (GET, POST).
+     * @var array The routes defined for the application. Organized by HTTP method.
      */
     protected array $routes = [
         'GET' => [],
@@ -19,28 +20,22 @@ class Router
     ];
 
     /**
-     * @var Request The request object.
-     */
-    protected Request $request;
-
-    /**
      * Router constructor.
-     *
-     * @param Request $request The request object.
+     * It no longer requires a Request object to be injected.
      */
-    public function __construct(Request $request)
+    public function __construct()
     {
-        $this->request = $request;
+        // El constructor ahora está vacío.
     }
 
     /**
      * Registers a GET route.
      *
      * @param string $uri The URI to match.
-     * @param string $controllerAction The controller and action to execute (e.g., "HomeController@index").
+     * @param array $controllerAction An array containing [Controller::class, 'methodName'].
      * @return void
      */
-    public function get(string $uri, string $controllerAction): void
+    public function get(string $uri, array $controllerAction): void
     {
         $this->routes['GET'][$uri] = $controllerAction;
     }
@@ -49,73 +44,76 @@ class Router
      * Registers a POST route.
      *
      * @param string $uri The URI to match.
-     * @param string $controllerAction The controller@action string.
+     * @param array $controllerAction An array containing [Controller::class, 'methodName'].
+     * @return void
      */
-    public function post(string $uri, string $controllerAction): void
+    public function post(string $uri, array $controllerAction): void
     {
         $this->routes['POST'][$uri] = $controllerAction;
     }
 
     /**
-     * Registers a POST route.
+     * Resolves the current request and dispatches to the correct controller.
      *
-     * @param string $uri The URI to match.
-     * @param string $controllerAction The controller and action to execute (e.g., "AuthController@processLogin").
+     * @param PDO $pdo The database connection instance, to be injected into controllers.
      * @return void
      */
-    public function resolve(PDO $pdo)
+    public function resolve(PDO $pdo): void
     {
-        $uri = $this->request->getUri();
-        $method = $this->request->getMethod();
+        // Obtiene la URI y el método directamente de las superglobales de PHP.
+        $uri = strtok($_SERVER['REQUEST_URI'], '?');
+        $method = $_SERVER['REQUEST_METHOD'];
 
-        // 1. ITERAR SOBRE LAS RUTAS REGISTRADAS PARA EL MÉTODO ACTUAL
         foreach ($this->routes[$method] as $routePattern => $controllerAction) {
             
-            // 2. CONVERTIR EL PATRÓN DE RUTA EN UNA EXPRESIÓN REGULAR
-            // Reemplaza los marcadores como {id} con un regex que captura dígitos.
-            // Por ejemplo, '/profile/{id}/edit' se convierte en '#^/profile/(\d+)/edit$#'.
-            $regexPattern = preg_replace('/\{([a-zA-Z]+)\}/', '(?P<$1>\d+)', $routePattern);
+            // La lógica para rutas dinámicas (ej. /profile/{id}) se mantiene.
+            $regexPattern = preg_replace('/\{([a-zA-Z_]+)\}/', '(?P<$1>[^/]+)', $routePattern);
             $regexPattern = '#^' . $regexPattern . '$#';
 
-            // 3. COMPROBAR SI LA URI ACTUAL COINCIDE CON EL PATRÓN REGEX
             if (preg_match($regexPattern, $uri, $matches)) {
                 
-                // 4. SI HAY COINCIDENCIA, EXTRAER LOS PARÁMETROS
-                // $matches contendrá los valores capturados (ej. 'id' => '5').
-                // Eliminamos las coincidencias numéricas para quedarnos solo con las asociativas.
+                // Extrae los parámetros de la ruta (ej. 'id' => '123').
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
                 
-                // 5. GUARDAR LOS PARÁMETROS EN EL OBJETO REQUEST
-                // Así, el controlador podrá acceder a ellos fácilmente.
-                $this->request->setRouteParams($params);
+                // Crea un nuevo objeto Request para esta petición específica.
+                $request = new Request($_GET, $_POST, $_FILES, $_SERVER, $params);
 
-                // 6. LLAMAR AL CONTROLADOR (La lógica que ya tenías)
-                $routeParts = explode('@', $controllerAction);
-                $controllerName = "App\\Controllers\\" . $routeParts[0];
-                $action = $routeParts[1] ?? 'index';
+                // CAMBIO: Se adapta a la nueva sintaxis de array [Controller::class, 'action'].
+                $controllerName = $controllerAction[0];
+                $action = $controllerAction[1];
 
                 if (!class_exists($controllerName)) {
-                    http_response_code(404);
-                    echo "404 Not Found - Controller not found";
-                    return;
+                    $this->abort(404, "Controlador no encontrado: $controllerName");
                 }
 
+                // Inyecta la conexión PDO al constructor del controlador.
                 $controller = new $controllerName($pdo);
 
                 if (!method_exists($controller, $action)) {
-                    http_response_code(404);
-                    echo "404 Not Found - Action not found in $controllerName";
-                    return;
+                    $this->abort(404, "Método no encontrado: $action en el controlador $controllerName");
                 }
 
-                // Ejecutamos la acción y terminamos el bucle, ya que encontramos la ruta.
-                $controller->$action($this->request);
-                return;
+                // Llama al método del controlador, pasándole el objeto Request.
+                // Esto permite al controlador acceder a los datos de la petición.
+                $controller->$action($request);
+                return; // Termina la ejecución una vez que se encuentra la ruta.
             }
         }
 
-        // Si el bucle termina y no se encontró ninguna ruta, es un 404.
-        http_response_code(404);
-        echo "404 Not Found - Route '$uri' not found for method '$method'";
+        $this->abort(404, "No se encontró una ruta para la URI: $uri");
+    }
+
+    /**
+     * Helper para mostrar una página de error.
+     * @param int $code El código de respuesta HTTP (ej. 404).
+     * @param string $message El mensaje a mostrar.
+     */
+    protected function abort(int $code, string $message): void
+    {
+        http_response_code($code);
+        // En un futuro, podrías renderizar una vista de error aquí.
+        // View::render("errors/{$code}", ['message' => $message]);
+        echo "Error $code: $message";
+        exit();
     }
 }
