@@ -1,58 +1,88 @@
 <?php
+/**
+ * @file User.php
+ * @package App\Models
+ * @author jeancgarciaq
+ * @version 1.0
+ * @date 2025-07-10
+ * @brief Modelo que representa la entidad de un usuario y gestiona su persistencia.
+*/
 
 namespace App\Models;
 
 use PDO;
 
 /**
- * Class User
- * Representa y gestiona los datos de un usuario en la base de datos.
+ * @class User
+ * @brief Representa a un usuario de la aplicación.
+ * Contiene las propiedades del usuario y los métodos para interactuar
+ * con la tabla 'users' en la base de datos.
  */
 class User
 {
+    /**
+     * @var PDO La conexión a la base de datos para realizar consultas.
+    */
     private PDO $pdo;
+
+    /**
+     * @var int|null El identificador único del usuario. Es null si el usuario no ha sido guardado.
+    */
     public ?int $id = null;
+
+    /**
+     * @var string El nombre de usuario, debe ser único.
+    */
     public string $username;
+
+    /**
+     * @var string El correo electrónico del usuario, debe ser único.
+    */
     public string $email;
+
+    /**
+     * @var string La contraseña del usuario, almacenada de forma segura (hasheada).
+    */
     public string $password;
 
+    /**
+     * @brief Constructor del modelo User.
+     * @param PDO $pdo La instancia de la conexión a la base de datos (Inyección de Dependencias).
+    */
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
     }
 
     /**
-     * Guarda el usuario actual en la base de datos.
-     * Si el usuario no tiene ID, lo crea. Si ya tiene ID, lo actualiza.
-     *
-     * @return bool True en éxito, false en fallo.
-     */
-    public function save(): bool
+     * @brief Actualiza el nombre de usuario y el email de un usuario.
+     * @param int $id El ID del usuario.
+     * @param string $username El nuevo nombre de usuario.
+     * @param string $email El nuevo correo electrónico.
+     * @return bool True si la actualización fue exitosa, false en caso contrario.
+    */
+    public function updateDetails(int $id, string $username, string $email): bool
     {
-        if ($this->id === null) {
-            // Lógica de creación
-            $stmt = $this->pdo->prepare(
-                "INSERT INTO users (username, email, password) VALUES (:username, :email, :password)"
-            );
-        } else {
-            // Lógica de actualización
-            $stmt = $this->pdo->prepare(
-                "UPDATE users SET username = :username, email = :email, password = :password WHERE id = :id"
-            );
-            $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
-        }
+        $stmt = $this->pdo->prepare("UPDATE users SET username = :username, email = :email WHERE id = :id");
+        $stmt->bindValue(':username', $username);
+        $stmt->bindValue(':email', $email);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
 
-        $stmt->bindValue(':username', $this->username);
-        $stmt->bindValue(':email', $this->email);
-        $stmt->bindValue(':password', $this->password);
-
-        $result = $stmt->execute();
-
-        if ($result && $this->id === null) {
-            $this->id = (int)$this->pdo->lastInsertId();
-        }
-
-        return $result;
+    /**
+     * @brief Actualiza la contraseña de un usuario.
+     * @param int $id El ID del usuario.
+     * @param string $newPassword La nueva contraseña (sin hashear).
+     * @return bool True si la actualización fue exitosa, false en caso contrario.
+    */
+    public function updatePassword(int $id, string $newPassword): bool
+    {
+        $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
+        $stmt = $this->pdo->prepare("UPDATE users SET password = :password WHERE id = :id");
+        $stmt->bindValue(':password', $hashedPassword);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
     }
 
     /**
@@ -60,7 +90,7 @@ class User
      * Solo funciona si el objeto tiene un ID.
      *
      * @return bool True en éxito, false en fallo.
-     */
+    */
     public function delete(): bool
     {
         if ($this->id === null) {
@@ -72,12 +102,11 @@ class User
     }
 
     /**
-     * Busca un usuario por su ID.
-     *
+     * Encuentra un usuario por su ID.
      * @param int $id El ID del usuario.
-     * @return array|false Un array con los datos del usuario, o false si no se encuentra.
+     * @return array|false Los datos del usuario o false si no se encuentra.
      */
-    public function find(int $id): array|false
+    public function findById(int $id): array|false
     {
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
