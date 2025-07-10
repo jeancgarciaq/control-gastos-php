@@ -53,7 +53,7 @@ class IncomeController extends AuthenticatedController
         $incomeModel = new Income($this->pdo);
         $incomes = $incomeModel->getAllForUser(Auth::id());
         
-        View::render('income/index', ['title' => 'Mis Ingresos', 'incomes' => $incomes]);
+        View::render('incomes/index', ['title' => 'Mis Ingresos', 'incomes' => $incomes]);
     }
 
     /**
@@ -64,7 +64,7 @@ class IncomeController extends AuthenticatedController
     public function create(): void
     {
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('income/create', ['title' => 'Crear Ingreso', 'profiles' => $profiles]);
+        View::render('incomes/create', ['title' => 'Crear Ingreso', 'profiles' => $profiles]);
     }
 
     /**
@@ -80,7 +80,7 @@ class IncomeController extends AuthenticatedController
 
         if (!$incomeRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('income/create', ['title' => 'Crear Ingreso', 'errors' => $incomeRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
+            View::render('incomes/create', ['title' => 'Crear Ingreso', 'errors' => $incomeRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
@@ -93,10 +93,10 @@ class IncomeController extends AuthenticatedController
 
         if ($income->save()) {
             $this->balanceService->updateProfileAssets($income->profile_id);
-            Response::redirect('/income');
+            Response::redirect('/incomes');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('income/create', ['title' => 'Crear Ingreso', 'errors' => ['general' => ['Error al crear el ingreso.']], 'data' => $data, 'profiles' => $profiles]);
+            View::render('incomes/create', ['title' => 'Crear Ingreso', 'errors' => ['general' => ['Error al crear el ingreso.']], 'data' => $data, 'profiles' => $profiles]);
         }
     }
 
@@ -113,12 +113,12 @@ class IncomeController extends AuthenticatedController
         $income = $incomeModel->find($id);
 
         if (!$income || !(new Profile($this->pdo))->isOwnedByUser($income['profile_id'], Auth::id())) {
-            Response::redirect('/income', ['error' => 'Ingreso no encontrado o sin permisos.']);
+            Response::redirect('/incomes', ['error' => 'Ingreso no encontrado o sin permisos.']);
             return;
         }
 
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('income/edit', ['title' => 'Editar Ingreso', 'income' => $income, 'profiles' => $profiles]);
+        View::render('incomes/edit', ['title' => 'Editar Ingreso', 'income' => $income, 'profiles' => $profiles]);
     }
 
     /**
@@ -135,7 +135,7 @@ class IncomeController extends AuthenticatedController
         $originalIncome = $incomeModel->find($id);
 
         if (!$originalIncome || !(new Profile($this->pdo))->isOwnedByUser($originalIncome['profile_id'], Auth::id())) {
-            Response::redirect('/income', ['error' => 'Ingreso no encontrado o sin permisos.']);
+            Response::redirect('/incomess', ['error' => 'Ingreso no encontrado o sin permisos.']);
             return;
         }
 
@@ -143,7 +143,7 @@ class IncomeController extends AuthenticatedController
         if (!$incomeRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             $data['id'] = $id;
-            View::render('income/edit', ['title' => 'Editar Ingreso', 'errors' => $incomeRequest->errors(), 'income' => $data, 'profiles' => $profiles]);
+            View::render('incomes/edit', ['title' => 'Editar Ingreso', 'errors' => $incomeRequest->errors(), 'income' => $data, 'profiles' => $profiles]);
             return;
         }
         
@@ -157,10 +157,10 @@ class IncomeController extends AuthenticatedController
 
         if ($incomeToUpdate->save()) {
             $this->balanceService->updateProfileAssets($incomeToUpdate->profile_id);
-            Response::redirect('/income');
+            Response::redirect('/incomess');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('income/edit', ['title' => 'Editar Ingreso', 'errors' => ['general' => ['Error al actualizar el ingreso.']], 'income' => $originalIncome, 'profiles' => $profiles]);
+            View::render('incomes/edit', ['title' => 'Editar Ingreso', 'errors' => ['general' => ['Error al actualizar el ingreso.']], 'income' => $originalIncome, 'profiles' => $profiles]);
         }
     }
 
@@ -177,7 +177,7 @@ class IncomeController extends AuthenticatedController
         $income = $incomeModel->find($id);
 
         if (!$income || !(new Profile($this->pdo))->isOwnedByUser($income['profile_id'], Auth::id())) {
-            Response::redirect('/income', ['error' => 'Ingreso no encontrado o sin permisos.']);
+            Response::redirect('/incomes', ['error' => 'Ingreso no encontrado o sin permisos.']);
             return;
         }
 
@@ -186,9 +186,9 @@ class IncomeController extends AuthenticatedController
 
         if ($incomeToDelete->delete()) {
             $this->balanceService->updateProfileAssets($income['profile_id']);
-            Response::redirect('/income', ['success' => 'Ingreso eliminado con éxito.']);
+            Response::redirect('/incomes', ['success' => 'Ingreso eliminado con éxito.']);
         } else {
-            Response::redirect('/income', ['error' => 'No se pudo eliminar el ingreso.']);
+            Response::redirect('/incomes', ['error' => 'No se pudo eliminar el ingreso.']);
         }
     }
 }
