@@ -40,7 +40,13 @@ class AuthController
      */
     public function register()
     {
-        View::render('auth/register', ['title' => 'Register']);
+        // Extraemos la siteKey y la pasamos a la vista
+        $siteKey = ReCaptcha::getSiteKey();
+
+        View::render('auth/register', [
+            'title'   => 'Register',
+            'siteKey' => $siteKey,
+        ]);
     }
 
     /**
@@ -54,14 +60,43 @@ class AuthController
         $data = $request->getBody();
         $registerRequest = new RegisterRequest();
 
+        // Verificamos que estemos recibiendo datos
         if (!$registerRequest->validate($data)) {
-            View::render('auth/register', ['title' => 'Register', 'errors' => $registerRequest->errors(), 'data' => $data]);
+            
+            if ($request->isAjax()) {
+                Response::json(['success' => false, 'errors' => $registerRequest->errors()]);
+                return;
+            }
+
+            View::render('auth/register', [
+                'title'   => 'Register',
+                'errors'  => $registerRequest->errors(),
+                'data'    => $data,
+                'siteKey' => ReCaptcha::getSiteKey(),
+            ]);
             return;
         }
         
-        // Asumiendo que has creado el helper ReCaptcha
-        if (!ReCaptcha::verify($data['g-recaptcha-response'], getenv('RECAPTCHA_SECRET_KEY'))) {
-            View::render('auth/register', ['title' => 'Register', 'errors' => ['recaptcha' => ['reCAPTCHA verification failed.']], 'data' => $data]);
+        // Usamos el helper para validar el captcha
+        if (!ReCaptcha::verify(
+            $data['g-recaptcha-response'],
+            getenv('RECAPTCHA_SECRET_KEY')
+        )) {
+            
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false, 
+                    'errors' => ['recaptcha' => ['reCAPTCHA verification failed.']]
+                ]);
+                return;
+            }
+
+            View::render('auth/register', [
+                'title'   => 'Register',
+                'errors'  => ['recaptcha' => ['reCAPTCHA verification failed.']],
+                'data'    => $data,
+                'siteKey' => ReCaptcha::getSiteKey(),
+            ]);
             return;
         }
 
@@ -70,11 +105,40 @@ class AuthController
 
         // Comprobamos si el usuario o email ya existen
         if ($user->findByUsername($data['username'])) {
-            View::render('auth/register', ['title' => 'Register', 'errors' => ['username' => ['Username already taken.']], 'data' => $data]);
+
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false, 
+                    'errors' => ['username' => ['Username already taken.']]
+                ]);
+                return;
+            }
+
+            View::render('auth/register', [
+                'title'   => 'Register',
+                'errors'  => ['username' => ['Username already taken.']],
+                'data'    => $data,
+                'siteKey' => ReCaptcha::getSiteKey(),
+            ]);
             return;
         }
+        
         if ($user->findByEmail($data['email'])) {
-            View::render('auth/register', ['title' => 'Register', 'errors' => ['email' => ['Email already in use.']], 'data' => $data]);
+
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false, 
+                    'errors' => ['email' => ['Email already in use.']]]
+                );
+                return;
+            }
+
+            View::render('auth/register', [
+                'title'   => 'Register',
+                'errors'  => ['email' => ['Email already in use.']],
+                'data'    => $data,
+                'siteKey' => ReCaptcha::getSiteKey(),
+            ]);
             return;
         }
         
@@ -83,10 +147,27 @@ class AuthController
         $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
 
         if ($user->create()) {
-            // Podrías añadir un "flash message" aquí para notificar al usuario.
+            
+            if ($request->isAjax()) {
+                Response::json(['success' => true]);
+                return;
+            }
             Response::redirect('/login');
         } else {
-            View::render('auth/register', ['title' => 'Register', 'errors' => ['general' => ['Registration failed. Please try again.']], 'data' => $data]);
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false, 
+                    'errors' => ['general' => ['Registration failed. Please try again.']]
+                ]);
+                return;
+            }
+            
+            View::render('auth/register', [
+                'title'   => 'Register',
+                'errors'  => ['general' => ['Registration failed. Please try again.']],
+                'data'    => $data,
+                'siteKey' => ReCaptcha::getSiteKey(),
+            ]);
         }
     }
 
@@ -116,7 +197,10 @@ class AuthController
             return;
         }
         
-        if (!ReCaptcha::verify($data['g-recaptcha-response'], getenv('RECAPTCHA_SECRET_KEY'))) {
+        if (!ReCaptcha::verify(
+            $data['g-recaptcha-response'],
+            getenv('RECAPTCHA_SECRET_KEY')
+        )) {
             View::render('auth/login', ['title' => 'Login', 'errors' => ['recaptcha' => ['reCAPTCHA verification failed.']], 'data' => $data]);
             return;
         }
