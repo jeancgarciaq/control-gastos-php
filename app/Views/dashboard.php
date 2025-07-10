@@ -1,16 +1,8 @@
 <?php
 /**
  * @var string $title The title of the page.
+ * @var array $user An array containing the authenticated user's data.
  */
-
-use App\Core\Auth;
-
-if (!Auth::check()) {
-    \App\Core\Response::redirect('/login');
-}
-
-$user = Auth::user();
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,7 +21,7 @@ $user = Auth::user();
         <nav class="py-4">
             <ul>
                 <li class="px-4 py-2 hover:bg-gray-700">
-                    <a href="/profile/<?= Auth::id() ?>" class="block">Profile</a>
+                    <a href="/profiles" class="block">Profiles</a>
                 </li>
                 <li class="px-4 py-2 hover:bg-gray-700">
                     <a href="/expenses" class="block">Expenses</a>
