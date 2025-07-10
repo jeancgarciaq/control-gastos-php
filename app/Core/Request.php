@@ -18,12 +18,21 @@ class Request
      *
      * @return string The URI.
      */
-    public function getUri(): string
+     public function getUri(): string
     {
         $uri = $_SERVER['REQUEST_URI'];
         $uri = strtok($uri, '?');
-        return rtrim($uri, '/');
+        // Quitamos la barra final
+        $uri = rtrim($uri, '/');
+
+        // Si era exactamente "/", al quitar la slash queda vacío
+        if ($uri === '') {
+            return '/';
+        }
+
+        return $uri;
     }
+
 
     /**
      * Gets the HTTP method of the request (GET, POST, etc.).
@@ -79,5 +88,15 @@ class Request
     public function getRouteParam(string $paramName, $default = null)
     {
         return $this->routeParams[$paramName] ?? $default;
+    }
+
+    /**
+     * Determines if the request is an AJAX request.
+     *
+     * @return bool
+    */
+    public function isAjax(): bool
+    {
+        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
 }
