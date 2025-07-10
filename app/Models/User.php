@@ -45,7 +45,7 @@ class User
      */
     public function create(): bool
     {
-        $stmt = $this->pdo->prepare("INSERT INTO user (username, email, password) VALUES (:username, :email, :password)");
+        $stmt = $this->pdo->prepare("INSERT INTO users (username, email, password) VALUES (:username, :email, :password)");
         $stmt->bindValue(':username', $this->username);
         $stmt->bindValue(':email', $this->email);
         $stmt->bindValue(':password', $this->password);
@@ -67,7 +67,7 @@ class User
      */
     public function find(int $id): mixed
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM user WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -82,7 +82,7 @@ class User
      */
     public function findByUsername(string $username): mixed
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM user WHERE username = :username");
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE username = :username");
         $stmt->bindValue(':username', $username);
         $stmt->execute();
 
@@ -97,7 +97,7 @@ class User
      */
     public function findByEmail(string $email): mixed
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM user WHERE email = :email");
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = :email");
         $stmt->bindValue(':email', $email);
         $stmt->execute();
 
@@ -113,7 +113,7 @@ class User
      */
     public function deleteUser(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM user WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
         return $stmt->execute();
