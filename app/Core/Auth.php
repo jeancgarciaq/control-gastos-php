@@ -100,6 +100,6 @@ class Auth
         // Crea una instancia del modelo User y busca al usuario por su ID.
         // (Asume que tu modelo User tiene un método find($id)).
         $userModel = new User($pdo);
-        return $userModel->find(self::id());
+        return $userModel->findById(self::id());
     }
 }
