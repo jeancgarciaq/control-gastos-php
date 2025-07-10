@@ -89,6 +89,21 @@ class User
         return $stmt->fetch();
     }
 
+    /**
+     * Finds a user by its email.
+     *
+     * @param string $email The email.
+     * @return mixed An array containing the user data, or false if not found.
+     */
+    public function findByEmail(string $email): mixed
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM user WHERE email = :email");
+        $stmt->bindValue(':email', $email);
+        $stmt->execute();
+
+        return $stmt->fetch();
+    }
+
     //You might add update() and delete() methods here if needed
 
     /**
