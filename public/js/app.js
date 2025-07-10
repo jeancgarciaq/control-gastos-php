@@ -1,108 +1,149 @@
+/**
+ * @file Maneja la lógica de los formularios de la aplicación, incluyendo la integración
+ * con reCAPTCHA v3 y el envío de datos mediante AJAX.
+ * @author Jean Carlo Garcia
+ * @version 1.0
+ */
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log('app.js loaded');
-  const script = document.querySelector('script[src*="api.js"]');
-  const siteKey = script?.src.split('render=')[1] || '';
 
   /**
-   * Attaches AJAX submit with reCAPTCHA v3, manual redirect handling and error rendering.
-   *
-   * @param {string} formSelector       - Selector del formulario a “ajaxificar”.
-   * @param {string} successRedirect    - Ruta a la que redirigir en caso de éxito.
-   * @param {string} actionName         - Nombre de la acción para grecaptcha.execute().
-   * @returns {void}
+   * Obtiene la Site Key de reCAPTCHA v3 analizando la URL del script de Google.
+   * @returns {string|null} La Site Key si se encuentra, o null si no.
    */
-  function ajaxifyForm(formSelector, successRedirect, actionName) {
-    const form = document.querySelector(formSelector);
-    if (!form) {
-      console.warn('Form no encontrado:', formSelector);
-      return;
-    }
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (typeof grecaptcha !== 'undefined' && siteKey) {
-        grecaptcha.ready(() => {
-          grecaptcha
-            .execute(siteKey, { action: actionName })
-            .then((token) => {
-              form.querySelector('input[name="g-recaptcha-response"]').value = token;
-              const formData = new FormData(form);
-              fetch(form.action, {
-                method: form.method,
-                body: formData,
-                credentials: 'same-origin',
-                headers: {
-                  'Accept': 'application/json',
-                  'X-Requested-With': 'XMLHttpRequest'
-                },
-                redirect: 'manual'
-              })
-                .then((res) => {
-                  if (res.status === 302) {
-                    window.location.href = res.headers.get('Location');
-                    return;
-                  }
-                  const ct = res.headers.get('Content-Type') || '';
-                  if (ct.includes('application/json')) {
-                    return res.json().then((data) => {
-                      if (data.success) {
-                        window.location.href = successRedirect;
-                      } else {
-                        displayFormErrors(formSelector, data.errors || {});
-                      }
-                    });
-                  }
-                  if (ct.includes('text/html')) {
-                    return res.text().then((text) => {
-                      const doc = new DOMParser().parseFromString(text, 'text/html');
-                      const newForm = doc.querySelector(formSelector);
-                      if (newForm) {
-                        form.replaceWith(newForm);
-                      } else {
-                        const loc = res.headers.get('Location');
-                        if (loc) window.location.href = loc;
-                      }
-                    });
-                  }
-                  console.warn('Unexpected response type:', ct);
-                })
-                .catch((err) => {
-                  console.error('Fetch failed:', err);
-                  form.submit();
-                });
-            });
-        });
-      } else {
-        form.submit();
+  function getRecaptchaSiteKey() {
+    const script = document.querySelector('script[src*="recaptcha/api.js"]');
+    if (script) {
+      try {
+        const url = new URL(script.src);
+        return url.searchParams.get('render');
+      } catch (e) {
+        console.error("Error al analizar la URL del script de reCAPTCHA:", e);
+        return null;
       }
-    });
+    }
+    return null;
+  }
+
+  const siteKey = getRecaptchaSiteKey();
+  if (!siteKey) {
+    console.error('La Site Key de reCAPTCHA v3 no fue encontrada. Asegúrate de que el script de Google se cargue correctamente en la vista.');
   }
 
   /**
-   * Inserta mensajes de error bajo los campos del formulario.
-   *
-   * @param {string} formSelector             - Selector del formulario.
-   * @param {Object.<string, string[]>} errors - Mapa campo → array de mensajes.
-   * @returns {void}
+   * Mejora un formulario HTML para que se envíe vía AJAX con validación de reCAPTCHA v3.
+   * Previene el envío por defecto, obtiene un token de reCAPTCHA, y maneja la respuesta del servidor.
+   * @param {string} formId - El ID del elemento del formulario a mejorar (ej. 'registrationForm').
+   * @param {string} successUrl - La URL a la que se redirigirá al usuario si el envío es exitoso.
+   * @param {string} recaptchaAction - El nombre de la acción para la ejecución de reCAPTCHA (ej. 'register' o 'login').
+   * @returns {void} No devuelve ningún valor.
    */
-  function displayFormErrors(formSelector, errors) {
-    const form = document.querySelector(formSelector);
-    if (!form) return;
-    form.querySelectorAll('.js-error').forEach(el => el.remove());
+  function ajaxifyForm(formId, successUrl, recaptchaAction) {
+    const form = document.getElementById(formId);
+    if (!form) {
+      // No es un error, simplemente el formulario no está en esta página.
+      return;
+    }
 
-    Object.entries(errors).forEach(([field, msgs]) => {
-      const input = form.querySelector(`[name="${field}"]`);
-      if (!input) return;
-      msgs.forEach(msg => {
-        const div = document.createElement('div');
-        div.className = 'js-error text-red-600 text-sm mt-1';
-        div.textContent = msg;
-        input.insertAdjacentElement('afterend', div);
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      if (typeof grecaptcha === 'undefined' || !siteKey) {
+        console.error('grecaptcha no está listo o falta la Site Key. Abortando envío.');
+        displayFormErrors({ general: ['Error de configuración de seguridad. No se puede enviar el formulario.'] });
+        return;
+      }
+
+      grecaptcha.ready(() => {
+        grecaptcha.execute(siteKey, { action: recaptchaAction }).then((token) => {
+          const recaptchaInput = document.getElementById('g-recaptcha-response');
+          if (recaptchaInput) {
+            recaptchaInput.value = token;
+          }
+
+          const formData = new FormData(form);
+
+          fetch(form.action, {
+            method: form.method,
+            body: formData,
+            headers: {
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if(data.success) {
+              if (data.redirect) {
+                  window.location.href = data.redirect;
+              } else {
+                  window.location.href = successUrl;
+              }
+            } else {
+              displayFormErrors(data.errors || { general: ['Ha ocurrido un error inesperado.'] });
+            }
+          })
+          .catch(error => {
+            console.error('Error en la solicitud Fetch:', error);
+            displayFormErrors({ general: ['Ocurrió un error de red. Por favor, inténtalo de nuevo.'] });
+          });
+        });
       });
     });
   }
 
-  // Inicializar AJAX en el formulario de registro
-  ajaxifyForm('#registrationForm', '/login', 'register');
-  ajaxifyForm('#loginForm', '/dashboard', 'login');
+  /**
+   * Muestra los errores de validación del formulario en la interfaz de usuario.
+   * Limpia los errores anteriores y renderiza los nuevos dentro de un contenedor de alerta.
+   * @param {Object.<string, string[]>} errors - Un objeto donde las claves son los nombres de los campos
+   * y los valores son arrays de mensajes de error. Un campo 'general' puede usarse para errores no asociados a un input.
+   * @returns {void}
+   */
+  function displayFormErrors(errors) {
+    const errorContainer = document.getElementById('error-container');
+    if (!errorContainer) {
+        console.error("El contenedor de errores con ID 'error-container' no fue encontrado en el DOM.");
+        return;
+    }
+
+    // Limpia errores anteriores
+    errorContainer.innerHTML = '';
+    document.querySelectorAll('.js-error').forEach(el => el.remove());
+
+    const errorList = document.createElement('ul');
+    errorList.className = 'list-disc list-inside mt-2 text-red-700';
+    
+    // Aplica estilos de alerta de Tailwind
+    errorContainer.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4';
+    errorContainer.setAttribute('role', 'alert');
+    errorContainer.innerHTML = '<strong class="font-bold">¡Error!</strong><span class="block sm:inline"> Por favor, corrige los siguientes errores:</span>';
+    
+    Object.entries(errors).forEach(([field, messages]) => {
+      messages.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        errorList.appendChild(li);
+
+        // Opcional: Muestra el error también debajo del campo específico
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'js-error text-red-600 text-sm mt-1';
+            errorDiv.textContent = msg;
+            // Inserta el error después del input
+            input.parentElement.appendChild(errorDiv);
+        }
+      });
+    });
+
+    if (errorList.hasChildNodes()) {
+        errorContainer.appendChild(errorList);
+    }
+  }
+
+  // --- INICIALIZACIÓN ---
+  // Se asigna la lógica AJAX a los formularios que puedan existir en la página.
+  ajaxifyForm('registrationForm', '/login', 'register');
+  ajaxifyForm('loginForm', '/dashboard', 'login');
 });
