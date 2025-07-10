@@ -5,28 +5,18 @@
        <meta name="viewport" content="width=device-width, initial-scale=1.0">
        <title><?= htmlspecialchars($title) ?></title>
        <link href="./output.css" rel="stylesheet">
+       <!-- Cargamos reCAPTCHA v3 con tu siteKey -->
+       <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($siteKey) ?>"></script>
     </head>
     <body class="bg-gray-100 h-screen flex items-center justify-center">
 
        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
            <h2 class="text-2xl font-bold mb-4">Register</h2>
-
-           <?php if (isset($errors) && !empty($errors)): ?>
-               <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                   <strong class="font-bold">Error!</strong>
-                   <span class="block sm:inline">Please correct the following errors:</span>
-                   <ul class="list-disc list-inside mt-2">
-                       <?php foreach ($errors as $field => $messages): ?>
-                           <?php foreach ($messages as $message): ?>
-                               <li><?= htmlspecialchars($message) ?></li>
-                           <?php endforeach; ?>
-                       <?php endforeach; ?>
-                   </ul>
-               </div>
-           <?php endif; ?>
-
-           <form method="post" action="/register" id="registrationForm">
-               <div class="mb-4">
+          <div id="error-container"></div>
+           
+            <form method="post" action="/register" id="registrationForm">
+                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
+                <div class="mb-4">
                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
                        Username
                    </label>
@@ -76,10 +66,7 @@
 
                 </div>
             </form>
-        </div>
-            <!-- Cargamos reCAPTCHA v3 con tu siteKey -->
-            <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($siteKey) ?>"></script>
-            <script src="/js/recaptcha.js"></script>
+        </div>     
             <script src="/js/app.js" defer></script>
     </body>
 </html>
