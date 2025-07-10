@@ -1,33 +1,41 @@
 <?php
+/**
+ * @file Auth.php
+ * @package App\Core
+ * @author Jean Carlo Garcia
+ * @version 1.1
+ * @brief Gestiona la autenticación de usuarios (login, logout, estado).
+ */
 
 namespace App\Core;
 
+use App\Models\User;
 use PDO;
 
+/**
+ * @class Auth
+ * @brief Proporciona métodos estáticos para manejar el ciclo de vida de la autenticación.
+ */
 class Auth
 {
-    public static $mock = false;
-    public static $mockAuthCheck = false;
-    public static $mockAuthId = null;
-    public static $mockUser = null;
-
     /**
-     * Attempts to authenticate a user with the given username and password.
+     * Intenta autenticar a un usuario con su nombre de usuario y contraseña.
      *
-     * @param string $username The username.
-     * @param string $password The password.
-     * @return bool True if authentication is successful, false otherwise.
+     * @param string $username El nombre de usuario.
+     * @param string $password La contraseña en texto plano.
+     * @param PDO $pdo La instancia de conexión a la base de datos.
+     * @return bool Devuelve true si la autenticación es exitosa, de lo contrario false.
      */
     public static function attempt(string $username, string $password, PDO $pdo): bool
     {
-        $user = (new \App\Models\User($this->pdo))->findByUsername($username);
+        $userModel = new User($pdo);
+        $user = $userModel->findByUsername($username);
 
         if ($user && password_verify($password, $user['password'])) {
-            // Generate a token (simplified for now)
-            $token = bin2hex(random_bytes(32));
-            $_SESSION['auth_token'] = $token;
-            $_SESSION['user_id'] = $user['id']; // Store user ID in session
-
+            // Regenera el ID de sesión para prevenir ataques de fijación de sesión.
+            session_regenerate_id(true);
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
             return true;
         }
 
@@ -35,67 +43,63 @@ class Auth
     }
 
     /**
-     * Checks if a user is currently authenticated.
+     * Verifica si hay un usuario autenticado.
      *
-     * @return bool True if the user is authenticated, false otherwise.
+     * @return bool True si el usuario está logueado, false en caso contrario.
      */
     public static function check(): bool
     {
-        if(self::$mock){
-            return self::$mockAuthCheck;
-        }
-        return isset($_SESSION['auth_token']);
+        return isset($_SESSION['user_id']);
     }
 
     /**
-     * Gets the ID of the currently authenticated user.
-     *
-     * @return int|null The user ID, or null if the user is not authenticated.
-     */
-    public static function id(): ?int
-    {
-        if(self::$mock){
-            return self::$mockAuthId;
-        }
-        return $_SESSION['user_id'] ?? null;
-    }
-
-    /**
-     * Logs out the currently authenticated user.
+     * Cierra la sesión del usuario.
      *
      * @return void
      */
     public static function logout(): void
     {
-        unset($_SESSION['auth_token']);
-        unset($_SESSION['user_id']);
+        // Limpia todas las variables de sesión.
+        $_SESSION = [];
+
+        // Destruye la sesión.
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+
         session_destroy();
     }
 
-      /**
-     * Checks if the current user is a guest (not logged in).
+    /**
+     * Obtiene el ID del usuario autenticado.
      *
-     * @return bool True if the user is a guest, false otherwise.
+     * @return int|null El ID del usuario o null si no está logueado.
      */
-    public static function guest(): bool
+    public static function id(): ?int
     {
-      return !self::check();
+        return $_SESSION['user_id'] ?? null;
     }
 
     /**
-     * Gets the currently authenticated user's data.
+     * Obtiene los datos completos del usuario autenticado.
      *
-     * @return array|null An associative array of user data, or null if the user is not authenticated.
+     * @param PDO $pdo La instancia de conexión a la base de datos.
+     * @return array|null Un array asociativo con los datos del usuario, o null si no está logueado.
      */
-    public static function user(): ?array
+    public static function user(PDO $pdo): ?array
     {
-        if(self::$mock){
-            return self::$mockUser;
+        // Si no hay un usuario logueado, devuelve null.
+        if (!self::check()) {
+            return null;
         }
-        $userId = self::id();
-        if ($userId) {
-            return (new \App\Models\User())->find($userId);
-        }
-        return null;
+
+        // Crea una instancia del modelo User y busca al usuario por su ID.
+        // (Asume que tu modelo User tiene un método find($id)).
+        $userModel = new User($pdo);
+        return $userModel->findById(self::id());
     }
 }

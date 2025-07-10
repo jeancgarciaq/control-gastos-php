@@ -1,4 +1,12 @@
 <?php
+/**
+ * @file ExpenseController.php
+ * @package App\Controllers
+ * @author Jean Carlo Garcia
+ * @version 1.0
+ * @date 2025-07-10
+ * @brief Controlador para gestionar los gastos de usuarios.
+ */
 
 namespace App\Controllers;
 
@@ -13,268 +21,175 @@ use App\Services\BalanceService;
 use PDO;
 
 /**
- * Class ExpenseController
- * Handles expense-related requests.
-*/
-class ExpenseController
+ * @class ExpenseController
+ * @brief Gestiona las peticiones relacionadas con los gastos (CRUD).
+ * Hereda de AuthenticatedController, por lo que todas sus acciones requieren autenticación.
+ */
+class ExpenseController extends AuthenticatedController
 {
     /**
-     * @var PDO The database connection object.
-    */
-    private PDO $pdo;
-
-    /**
-     * @var BalanceService The service for calculating balances.
-    */
+     * @var BalanceService El servicio para calcular balances.
+     */
     private BalanceService $balanceService;
 
     /**
-     * ExpenseController constructor.
+     * Constructor de ExpenseController.
      *
-     * @param PDO $pdo The database connection object.
-    */
+     * @param PDO $pdo La instancia de conexión a la base de datos.
+     */
     public function __construct(PDO $pdo)
     {
-        $this->pdo = $pdo;
+        parent::__construct($pdo);
         $this->balanceService = new BalanceService($this->pdo);
     }
 
     /**
-     * Displays a list of all expenses for the user.
+     * Muestra una lista de todos los gastos del usuario.
      *
      * @return void
-    */
-    public function index()
+     */
+    public function index(): void
     {
-        if (Auth::guest()) Response::redirect('/login');
-
         $expenseModel = new Expense($this->pdo);
         $expenses = $expenseModel->getAllForUser(Auth::id());
         
-        View::render('expenses/index', ['title' => 'My Expenses', 'expenses' => $expenses]);
+        View::render('expenses/index', ['title' => 'Mis Gastos', 'expenses' => $expenses]);
     }
 
     /**
-     * Displays the expense creation form.
+     * Muestra el formulario para crear un nuevo gasto.
      *
      * @return void
      */
-    public function create()
+    public function create(): void
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
-
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('expenses/create', ['title' => 'Create Expense', 'profiles' => $profiles]);
+        View::render('expenses/create', ['title' => 'Crear Gasto', 'profiles' => $profiles]);
     }
 
     /**
-     * Processes the expense creation form submission.
+     * Almacena un nuevo gasto en la base de datos.
      *
-     * @param Request $request The request object.
+     * @param Request $request La petición HTTP con los datos del formulario.
      * @return void
      */
-    public function store(Request $request)
+    public function store(Request $request): void
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
-
         $data = $request->getBody();
-        $expenseRequest = new ExpenseRequest();
+        $expenseRequest = new ExpenseRequest(); // Asumiendo que esta clase valida los datos
 
         if (!$expenseRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/create', ['title' => 'Create Expense', 'errors' => $expenseRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
+            View::render('expenses/create', ['title' => 'Crear Gasto', 'errors' => $expenseRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
         $expense = new Expense($this->pdo);
         $expense->date = $data['date'];
         $expense->description = $data['description'];
-        $expense->amount = $data['amount'];
+        $expense->amount = (float) $data['amount'];
         $expense->type = $data['type'];
-        $expense->profile_id = $data['profile_id'];
+        $expense->profile_id = (int) $data['profile_id'];
 
-        if ($expense->create()) {
-            //Update the profile assets with the new balance
+        if ($expense->save()) {
             $this->balanceService->updateProfileAssets($expense->profile_id);
             Response::redirect('/expenses');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/create', ['title' => 'Create Expense', 'errors' => ['general' => ['Failed to create expense.']], 'data' => $data, 'profiles' => $profiles]);
+            View::render('expenses/create', ['title' => 'Crear Gasto', 'errors' => ['general' => ['Error al crear el gasto.']], 'data' => $data, 'profiles' => $profiles]);
         }
     }
 
     /**
-     * Displays the expense editing form.
+     * Muestra el formulario para editar un gasto.
      *
-     * @param Request $request The request object.
-     * @param int $id The ID of the expense to edit.
+     * @param Request $request La petición HTTP, usada para obtener el ID de la ruta.
      * @return void
      */
-    public function edit(Request $request)
+    public function edit(Request $request): void
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
-
-        // Obtiene el 'id' de la ruta usando el nuevo método
-        $id = $request->getRouteParam('id');
-
-        if (!$id) {
-            // Manejar error si no hay ID
-            Response::redirect('/dashboard');
-        }
-
+        $id = (int)$request->getRouteParam('id');
         $expenseModel = new Expense($this->pdo);
-        $expense = $expenseModel->find((int)$id);
+        $expense = $expenseModel->find($id);
 
-        if (!$expense || !(new Profile())->isOwnedByUser($expense['profile_id'], Auth::id())) {
-            Response::redirect('/expenses');
+        if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
+            Response::redirect('/expenses', ['error' => 'Gasto no encontrado o sin permisos.']);
+            return;
         }
+
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('expenses/edit', ['title' => 'Edit Expense', 'expense' => $expense, 'profiles' => $profiles]);
+        View::render('expenses/edit', ['title' => 'Editar Gasto', 'expense' => $expense, 'profiles' => $profiles]);
     }
 
     /**
-     * Processes the expense editing form submission.
+     * Actualiza un gasto existente en la base de datos.
      *
-     * @param Request $request The request object.
-     * @param int $id The ID of the expense to update.
+     * @param Request $request La petición HTTP con los datos y el ID de la ruta.
      * @return void
      */
-    public function update(Request $request)
+    public function update(Request $request): void
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
+        $id = (int)$request->getRouteParam('id');
+        $data = $request->getBody();
+        $expenseModel = new Expense($this->pdo);
+        $originalExpense = $expenseModel->find($id);
+
+        if (!$originalExpense || !(new Profile($this->pdo))->isOwnedByUser($originalExpense['profile_id'], Auth::id())) {
+            Response::redirect('/expenses', ['error' => 'Gasto no encontrado o sin permisos.']);
+            return;
+        }
+
+        $expenseRequest = new ExpenseRequest();
+        if (!$expenseRequest->validate($data)) {
+            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
+            $data['id'] = $id;
+            View::render('expenses/edit', ['title' => 'Editar Gasto', 'errors' => $expenseRequest->errors(), 'expense' => $data, 'profiles' => $profiles]);
+            return;
         }
         
-        // Obtiene el 'id' de la ruta usando el nuevo método
-        $id = $request->getRouteParam('id');
+        $expenseToUpdate = new Expense($this->pdo);
+        $expenseToUpdate->id = $id;
+        $expenseToUpdate->date = $data['date'];
+        $expenseToUpdate->description = $data['description'];
+        $expenseToUpdate->amount = (float) $data['amount'];
+        $expenseToUpdate->type = $data['type'];
+        $expenseToUpdate->profile_id = (int) $data['profile_id'];
 
-        if (!$id) {
-            // Manejar error si no hay ID
-            Response::redirect('/dashboard');
-        }
-
-        $expenseModel = new Expense($this->pdo);
-        $expense = $expenseModel->find((int)$id);
-
-        if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
-            Response::redirect('/expenses');
-        }
-
-        $data = $request->getBody();
-        $expenseRequest = new ExpenseRequest();
-
-        if (!$expenseRequest->validate($data)) {
-            $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/edit', ['title' => 'Edit Expense', 'errors' => $expenseRequest->errors(), 'expense' => $expense, 'data' => $data, 'profiles' => $profiles]);
-            return;
-        }
-
-        $expense = new Expense($this->pdo);
-        $expense->id = $id;
-        $expense->date = $data['date'];
-        $expense->description = $data['description'];
-        $expense->amount = $data['amount'];
-        $expense->type = $data['type'];
-        $expense->profile_id = $data['profile_id'];
-
-        if ($expense->update()) {
-            //Update the profile assets with the new balance
-            $this->balanceService->updateProfileAssets($expense->profile_id);
+        if ($expenseToUpdate->save()) {
+            $this->balanceService->updateProfileAssets($expenseToUpdate->profile_id);
             Response::redirect('/expenses');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/edit', ['title' => 'Edit Expense', 'errors' => ['general' => ['Failed to update expense.']], 'expense' => $expense, 'data' => $data, 'profiles' => $profiles]);
+            View::render('expenses/edit', ['title' => 'Editar Gasto', 'errors' => ['general' => ['Error al actualizar el gasto.']], 'expense' => $originalExpense, 'profiles' => $profiles]);
         }
     }
 
     /**
-     * Displays the details of a specific expense.
+     * Elimina un gasto de la base de datos.
      *
-     * @param int $id The ID of the expense to show.
-     * @return void
-     */
-    public function show(Request $request)
-    {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
-
-        // Obtiene el 'id' de la ruta usando el nuevo método
-        $id = $request->getRouteParam('id');
-
-        if (!$id) {
-            // Manejar error si no hay ID
-            Response::redirect('/dashboard');
-        }
-
-        $expenseModel = new Expense($this->pdo);
-        $expense = $expenseModel->find((int)$id);
-
-        if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
-            Response::redirect('/expenses'); // or error
-        }
-
-        View::render('expenses/show', ['title' => 'Expense Details', 'expense' => $expense]);
-    }
-
-    /**
-     * Deletes an expense.
-     *
-     * @param Request $request The request object.
-     * @param int $id The ID of the expense to delete.
+     * @param Request $request La petición HTTP, usada para obtener el ID de la ruta.
      * @return void
      */
     public function destroy(Request $request): void
     {
-        if (Auth::guest()) {
-            Response::redirect('/login');
-        }
-        
-        // Obtiene el 'id' de la ruta usando el nuevo método
-        $id = $request->getRouteParam('id');
-
-        if (!$id) {
-            // Manejar error si no hay ID
-            Response::redirect('/dashboard');
-        }
-
+        $id = (int)$request->getRouteParam('id');
         $expenseModel = new Expense($this->pdo);
-        $expense = $expenseModel->find((int)$id);
+        $expense = $expenseModel->find($id);
 
         if (!$expense || !(new Profile($this->pdo))->isOwnedByUser($expense['profile_id'], Auth::id())) {
-            Response::redirect('/expenses'); // or error
+            Response::redirect('/expenses', ['error' => 'Gasto no encontrado o sin permisos.']);
+            return;
         }
 
-        //Delete the expense
-        $expense = new Expense($this->pdo);
-        $expense->id = $id;
-        $profile_id = $expense->profile_id;
-        if ($this->deleteExpense($id)) {
-            //Update the profile assets with the new balance
-            $this->balanceService->updateProfileAssets($profile_id);
-            Response::redirect('/expenses'); //Redirect to expenses page
+        $expenseToDelete = new Expense($this->pdo);
+        $expenseToDelete->id = $id;
+
+        if ($expenseToDelete->delete()) {
+            // Usamos el profile_id del gasto que recuperamos antes de borrarlo.
+            $this->balanceService->updateProfileAssets($expense['profile_id']);
+            Response::redirect('/expenses', ['success' => 'Gasto eliminado con éxito.']);
         } else {
-            //Handle the case where the delete fails
-            echo "Failed to delete expense.";
+            Response::redirect('/expenses', ['error' => 'No se pudo eliminar el gasto.']);
         }
-    }
-
-    /**
-     * Delete expense from database
-     * @param int $id
-     * @return bool
-     */
-    public function deleteExpense(int $id): bool
-    {
-        $stmt = $$this->pdo->prepare("DELETE FROM expenses WHERE id = :id");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-
-        return $stmt->execute();
     }
 }

@@ -1,16 +1,8 @@
 <?php
 /**
  * @var string $title The title of the page.
+ * @var array $user An array containing the authenticated user's data.
  */
-
-use App\Core\Auth;
-
-if (!Auth::check()) {
-    \App\Core\Response::redirect('/login');
-}
-
-$user = Auth::user();
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,7 +10,7 @@ $user = Auth::user();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-    <link href="./output.css" rel="stylesheet">
+    <link href="/output.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 h-screen flex antialiased">
 
@@ -29,13 +21,13 @@ $user = Auth::user();
         <nav class="py-4">
             <ul>
                 <li class="px-4 py-2 hover:bg-gray-700">
-                    <a href="/profile/<?= Auth::id() ?>" class="block">Profile</a>
+                    <a href="/profiles" class="block">Profiles</a>
                 </li>
                 <li class="px-4 py-2 hover:bg-gray-700">
                     <a href="/expenses" class="block">Expenses</a>
                 </li>
                 <li class="px-4 py-2 hover:bg-gray-700">
-                    <a href="/income" class="block">Income</a>
+                    <a href="/incomes" class="block">Income</a>
                 </li>
                 <li class="px-4 py-2 hover:bg-gray-700">
                     <a href="/logout" class="block">Logout</a>

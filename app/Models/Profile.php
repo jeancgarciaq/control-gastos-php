@@ -1,4 +1,12 @@
 <?php
+/**
+ * @file Profile.php
+ * @package App\Models
+ * @author Jean Carlo Garcia
+ * @version 1.0
+ * @date 2025-07-10
+ * @brief Modelo para representar y gestionar los perfiles financieros de los usuarios.
+ */
 
 namespace App\Models;
 
@@ -6,60 +14,45 @@ use PDO;
 
 /**
  * Class Profile
- * Represents a user profile.
+ * Representa y gestiona los datos de un perfil financiero en la base de datos.
  */
 class Profile
 {
-    /**
-     * @var PDO The database connection object.
-     */
     private PDO $pdo;
 
-    /** @var int|null The profile ID. Null if the profile hasn't been saved to the database yet. */
     public ?int $id = null;
-
-    /** @var string The profile name. */
     public string $name;
-
-    /** @var string The profile phone number. */
     public string $phone;
-
-    /** @var string The user_id */
     public int $user_id;
-
-    /** @var string The profile position or company. */
     public string $position_or_company;
-
-    /** @var string The profile marital status. */
     public string $marital_status;
-
-    /** @var int The number of children. */
     public int $children;
-
-    /** @var float The profile assets.  This is the *displayed* asset value; the actual balance is calculated. */
     public float $assets;
-
-    /** @var float The profile initial balance. */
     public float $initial_balance;
 
-    /**
-     * Profile constructor.
-     *
-     * @param PDO $pdo The database connection object.
-     */
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
     }
 
     /**
-     * Creates a new profile in the database.
-     *  Sets the ID of the profile object if creation is successful.
-     * @return bool True on success, false on failure.
+     * Guarda el perfil actual en la base de datos.
+     * Si el perfil no tiene ID, lo crea (INSERT). Si ya tiene ID, lo actualiza (UPDATE).
+     *
+     * @return bool True en éxito, false en fallo.
      */
-    public function create(): bool
+    public function save(): bool
     {
-        $stmt = $this->pdo->prepare("INSERT INTO profile (name, phone, position_or_company, marital_status, children, assets, initial_balance, user_id) VALUES (:name, :phone, :position_or_company, :marital_status, :children, :assets, :initial_balance, :user_id)");
+        $sql = $this->id === null
+            ? "INSERT INTO profile (name, phone, position_or_company, marital_status, children, assets, initial_balance, user_id) VALUES (:name, :phone, :position_or_company, :marital_status, :children, :assets, :initial_balance, :user_id)"
+            : "UPDATE profile SET name = :name, phone = :phone, position_or_company = :position_or_company, marital_status = :marital_status, children = :children, assets = :assets, initial_balance = :initial_balance, user_id = :user_id WHERE id = :id";
+        
+        $stmt = $this->pdo->prepare($sql);
+
+        if ($this->id !== null) {
+            $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+        }
+
         $stmt->bindValue(':name', $this->name);
         $stmt->bindValue(':phone', $this->phone);
         $stmt->bindValue(':position_or_company', $this->position_or_company);
@@ -71,70 +64,63 @@ class Profile
 
         $result = $stmt->execute();
 
-        if ($result) {
+        if ($result && $this->id === null) {
             $this->id = (int)$this->pdo->lastInsertId();
         }
 
         return $result;
     }
-
+    
     /**
-     * Finds a profile by its ID.
+     * Elimina el perfil actual de la base de datos.
+     * Solo funciona si el objeto tiene un ID.
      *
-     * @param int $id The profile ID.
-     * @return mixed An array containing the profile data, or false if not found.
+     * @return bool True en éxito, false en fallo.
      */
-    public function find(int $id): mixed
+    public function delete(): bool
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE id = :id");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetch();
-    }
-
-    /**
-     * Updates an existing profile in the database.
-     *
-     * @return bool True on success, false on failure.
-     */
-    public function update(): bool
-    {
-        $stmt = $this->pdo->prepare("UPDATE profile SET name = :name, phone = :phone, position_or_company = :position_or_company, marital_status = :marital_status, children = :children, assets = :assets, initial_balance = :initial_balance, user_id = :user_id WHERE id = :id");
-        $stmt->bindValue(':name', $this->name);
-        $stmt->bindValue(':phone', $this->phone);
-        $stmt->bindValue(':position_or_company', $this->position_or_company);
-        $stmt->bindValue(':marital_status', $this->marital_status);
-        $stmt->bindValue(':children', $this->children, PDO::PARAM_INT);
-        $stmt->bindValue(':assets', $this->assets);
-        $stmt->bindValue(':initial_balance', $this->initial_balance);
-        $stmt->bindValue(':user_id', $this->user_id, PDO::PARAM_INT);
+        if ($this->id === null) {
+            return false; // No se puede borrar un perfil que no existe en la BD.
+        }
+        $stmt = $this->pdo->prepare("DELETE FROM profile WHERE id = :id");
         $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
-
         return $stmt->execute();
     }
 
     /**
-     * Retrieves all profiles associated with a given user.
+     * Busca un perfil por su ID.
      *
-     * @param int $userId The ID of the user.
-     * @return array An array containing the user's profiles.
-     */
-    public function getAllForUser(int $userId): array
+     * @param int $id El ID del perfil.
+     * @return array|false Un array con los datos del perfil, o false si no se encuentra.
+    */
+    public function find(int $id): array|false
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE user_id = :user_id");
-        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
-
-        return $stmt->fetchAll();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Checks if a profile is owned by a specific user.
+     * Recupera todos los perfiles asociados a un usuario.
      *
-     * @param int $profileId The ID of the profile.
-     * @param int $userId The ID of the user.
-     * @return bool True if the profile is owned by the user, false otherwise.
+     * @param int $userId El ID del usuario.
+     * @return array Un array de perfiles.
+     */
+    public function getAllForUser(int $userId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE user_id = :user_id ORDER BY name ASC");
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Comprueba si un perfil pertenece a un usuario específico.
+     *
+     * @param int $profileId El ID del perfil.
+     * @param int $userId El ID del usuario.
+     * @return bool True si el perfil pertenece al usuario, false en caso contrario.
      */
     public function isOwnedByUser(int $profileId, int $userId): bool
     {
@@ -142,7 +128,19 @@ class Profile
         $stmt->bindValue(':id', $profileId, PDO::PARAM_INT);
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
-
         return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * @brief Encuentra un perfil basado en el ID del usuario propietario.
+     * @param int $userId El ID del usuario.
+     * @return array|false Los datos del perfil o false si no se encuentra.
+     */
+    public function findByUserId(int $userId): array|false
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM profile WHERE user_id = :user_id LIMIT 1");
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

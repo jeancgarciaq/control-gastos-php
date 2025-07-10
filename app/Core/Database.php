@@ -7,28 +7,37 @@ use PDOException;
 
 /**
  * Class Database
- * Provides a singleton instance of a PDO database connection.
- * Note: While the connection is a singleton, it now depends on an Environment object.
+ * Provides a singleton instance of a PDO database connection using environment variables.
  */
 class Database
 {
     /**
-     * @var PDO|null The PDO instance.
-    */
+     * @var PDO|null The singleton PDO instance.
+     */
     private static ?PDO $instance = null;
 
     /**
      * Gets the singleton instance of the PDO database connection.
      *
-     * @param Environment $env The application's environment configuration object.
+     * This method now reads credentials directly from the $_ENV superglobal,
+     * which should be populated by Dotenv in the application's entry point.
+     *
      * @return PDO The PDO instance.
-     * @throws PDOException If the connection fails.
-    */
-    public static function getInstance(Environment $env): PDO
+     * @throws PDOException If the connection fails or environment variables are not set.
+     */
+    public static function connect(): PDO
     {
         if (self::$instance === null) {
-            // Use the Environment object to get credentials instead of getenv()
-            $dsn = "mysql:host=" . $env->get('DB_HOST') . ";dbname=" . $env->get('DB_DATABASE') . ";charset=utf8mb4";
+            // Check if the required environment variables are set
+            $required_keys = ['DB_HOST', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'];
+            foreach ($required_keys as $key) {
+                if (empty($_ENV[$key])) {
+                    // It's better to fail loudly if the configuration is incomplete.
+                    throw new PDOException("La variable de entorno '$key' no está definida. Revisa tu archivo .env.");
+                }
+            }
+
+            $dsn = "mysql:host=" . $_ENV['DB_HOST'] . ";dbname=" . $_ENV['DB_DATABASE'] . ";charset=utf8mb4";
             
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -37,11 +46,11 @@ class Database
             ];
 
             try {
-                self::$instance = new PDO($dsn, $env->get('DB_USERNAME'), $env->get('DB_PASSWORD'), $options);
+                self::$instance = new PDO($dsn, $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD'], $options);
             } catch (PDOException $e) {
-                // For security, don't echo detailed errors in production. Log them instead.
-                // For now, we re-throw the exception.
-                throw new PDOException($e->getMessage(), (int)$e->getCode());
+                // In a real production environment, you should log this error instead of exposing details.
+                // For development, re-throwing the exception is fine as it gives a clear error message.
+                throw new PDOException("Error de conexión a la base de datos: " . $e->getMessage(), (int)$e->getCode());
             }
         }
 
@@ -49,8 +58,8 @@ class Database
     }
 
     /**
-     * This class should not be instantiated directly.
-     * Use getInstance(Environment $env)
+     * The constructor is private to prevent direct instantiation.
+     * Use connect()
      */
     private function __construct() {}
 

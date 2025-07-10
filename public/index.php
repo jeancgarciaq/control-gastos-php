@@ -1,62 +1,54 @@
 <?php
+/**
+ * @file index.php
+ * @package App
+ * @author Jean Carlo Garcia
+ * @version 1.1
+ * @brief Punto de entrada principal de la aplicación.
+ */
 
-// 1. AUTOLOADING Y NAMESPACES
-use App\Core\Environment;
-use App\Core\Router;
-use App\Core\Request;
-use App\Core\Database; 
+// Inicia la sesión en cada petición. ESTA ES LA LÍNEA CLAVE.
+session_start();
 
+// Muestra todos los errores para facilitar la depuración.
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Carga el autoloader de Composer.
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use App\Core\Database;
+use App\Core\Router;
 
-// 2. INICIALIZACIÓN DE DEPENDENCIAS CENTRALES
-// Se crea el objeto de entorno UNA SOLA VEZ.
-$env = new Environment(__DIR__ . '/..');
+// Carga las variables de entorno desde el archivo .env.
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
 
-// Se obtiene la instancia de la base de datos, INYECTANDO el objeto de entorno.
-$pdo = Database::getInstance($env);
-
-
-// 3. REGISTRO DE RUTAS
-// Creamos el Router. En un futuro, podrías pasarle $pdo al router si fuera
-// necesario, para que él lo inyecte en los controladores.
-$router = new Router(new Request());
-
-// Define routes (example - adjust as needed)
-$router->get('/', 'HomeController@index');
-$router->get('/register', 'AuthController@register');
-$router->post('/register', 'AuthController@processRegister');
-$router->get('/login', 'AuthController@login');
-$router->post('/login', 'AuthController@processLogin');
-$router->get('/logout', 'AuthController@logout');
-
-//Profile Routes
-$router->get('/profile/create', 'ProfileController@create');
-$router->post('/profile/create', 'ProfileController@store');
-$router->get('/profile/{id}/edit', 'ProfileController@edit');
-$router->post('/profile/{id}/edit', 'ProfileController@update');
-$router->get('/profile/{id}', 'ProfileController@show');
-$router->post('/profile/{id}/delete', 'ProfileController@destroy'); //Simulate DELETE request
+// --- Conexión a la Base de Datos ---
+// Se encapsula en un bloque try-catch para manejar errores de conexión.
+try {
+    $pdo = Database::connect();
+} catch (\PDOException $e) {
+    // Si la conexión falla, muestra un mensaje de error y detiene la ejecución.
+    // En un entorno de producción, esto debería registrarse en un archivo de log
+    // y mostrar una página de error genérica al usuario.
+    error_log("Error de conexión a la base de datos: " . $e->getMessage());
+    die("Error de conexión a la base de datos. Por favor, revisa la configuración y asegúrate de que el servicio de base de datos esté en ejecución.");
+}
 
 
-// Expense Routes
-$router->get('/expenses', 'ExpenseController@index');
-$router->get('/expenses/create', 'ExpenseController@create');
-$router->post('/expenses/create', 'ExpenseController@store');
-$router->get('/expenses/{id}/edit', 'ExpenseController@edit');
-$router->post('/expenses/{id}/edit', 'ExpenseController@update');
-$router->get('/expenses/{id}', 'ExpenseController@show');
-$router->post('/expenses/{id}/delete', 'ExpenseController@destroy'); //Simulate DELETE request
+// --- Enrutamiento ---
+// Obtiene la URI y el método de la petición actual.
+$uri = $_SERVER['REQUEST_URI'];
+$method = $_SERVER['REQUEST_METHOD'];
 
-// Income Routes
-$router->get('/income', 'IncomeController@index');
-$router->get('/income/create', 'IncomeController@create');
-$router->post('/income/create', 'IncomeController@store');
-$router->get('/income/{id}/edit', 'IncomeController@edit');
-$router->post('/income/{id}/edit', 'IncomeController@update');
-$router->get('/income/{id}', 'IncomeController@show');
-$router->post('/income/{id}/delete', 'IncomeController@destroy'); //Simulate DELETE request
+// Crea una instancia del Router.
+$router = new Router();
 
-// 4. RESOLUCIÓN DE LA RUTA
-// Se llama al método resolve en la ÚNICA instancia del router que hemos creado y llenado.
+// Carga las rutas definidas en el archivo de rutas.
+require_once __DIR__ . '/../app/routes.php';
+
+// Resuelve la ruta actual y ejecuta el controlador correspondiente,
+// inyectando la conexión a la base de datos.
 $router->resolve($pdo);
