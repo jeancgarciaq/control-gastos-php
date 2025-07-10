@@ -1,119 +1,117 @@
 <?php
+/**
+ * @file Router.php
+ * @package App\Core
+ * @author jeancgarciaq
+ * @version 1.0
+ * @date 2025-07-10
+ * @brief Maneja el enrutamiento de las peticiones HTTP a los controladores.
+*/
 
 namespace App\Core;
 
 use PDO;
 
 /**
- * Class Router
- * Handles incoming requests and dispatches them to the appropriate controller action.
- * This version is refactored to be self-contained and use modern syntax.
+ * @class Router
+ * @brief Responsable de registrar rutas y resolverlas para ejecutar el controlador adecuado.
+ * Esta clase mapea las URIs a acciones de controladores, manejando tanto rutas estáticas
+ * como dinámicas con parámetros.
  */
 class Router
 {
     /**
-     * @var array The routes defined for the application. Organized by HTTP method.
+     * @var array Almacena todas las rutas registradas, agrupadas por método HTTP.
+     * @example ['get' => ['/path' => callback], 'post' => ['/path' => callback]]
      */
-    protected array $routes = [
-        'GET' => [],
-        'POST' => []
-    ];
+    protected array $routes = [];
 
     /**
-     * Router constructor.
-     * It no longer requires a Request object to be injected.
+     * @var Request La instancia del objeto Request asociada a la petición actual.
+    */
+    private Request $request;
+
+    /**
+     * @brief Constructor de la clase Router.
+     * Inicializa el objeto Request para encapsular la información de la petición.
      */
     public function __construct()
     {
-        // El constructor ahora está vacío.
+        $this->request = new Request();
     }
 
     /**
-     * Registers a GET route.
-     *
-     * @param string $uri The URI to match.
-     * @param array $controllerAction An array containing [Controller::class, 'methodName'].
+     * @brief Registra una nueva ruta para el método HTTP GET.
+     * @param string $path La URI de la ruta (ej: "/users/{id}").
+     * @param callable|array $callback La función o el array [controlador::class, 'método'] a ejecutar.
      * @return void
      */
-    public function get(string $uri, array $controllerAction): void
+    public function get(string $path, $callback): void
     {
-        $this->routes['GET'][$uri] = $controllerAction;
+        $this->routes['get'][$path] = $callback;
     }
 
     /**
-     * Registers a POST route.
-     *
-     * @param string $uri The URI to match.
-     * @param array $controllerAction An array containing [Controller::class, 'methodName'].
+     * @brief Registra una nueva ruta para el método HTTP POST.
+     * @param string $path La URI de la ruta (ej: "/users").
+     * @param callable|array $callback La función o el array [controlador::class, 'método'] a ejecutar.
      * @return void
      */
-    public function post(string $uri, array $controllerAction): void
+    public function post(string $path, $callback): void
     {
-        $this->routes['POST'][$uri] = $controllerAction;
+        $this->routes['post'][$path] = $callback;
     }
-
+    
     /**
-     * Resolves the current request and dispatches to the correct controller.
+     * @brief Resuelve la ruta actual, encuentra el controlador y método correspondiente, y lo ejecuta.
+     * Maneja tanto rutas estáticas como dinámicas (con parámetros), extrayendo los valores
+     * y poniéndolos a disposición a través del objeto Request.
      *
-     * @param PDO $pdo The database connection instance, to be injected into controllers.
+     * @param PDO $pdo La conexión a la base de datos para inyectar en los controladores.
      * @return void
      */
     public function resolve(PDO $pdo): void
     {
-        // Obtiene la URI y el método directamente de las superglobales de PHP.
-        $uri = strtok($_SERVER['REQUEST_URI'], '?');
-        $method = $_SERVER['REQUEST_METHOD'];
+        $path = $this->request->getPath();
+        $method = $this->request->getMethod();
+        $callback = $this->routes[$method][$path] ?? false;
 
-        foreach ($this->routes[$method] as $routePattern => $controllerAction) {
-            
-            // La lógica para rutas dinámicas (ej. /profile/{id}) se mantiene.
-            $regexPattern = preg_replace('/\{([a-zA-Z_]+)\}/', '(?P<$1>[^/]+)', $routePattern);
-            $regexPattern = '#^' . $regexPattern . '$#';
+        if ($callback === false) {
+            foreach ($this->routes[$method] as $route => $routeCallback) {
+                if (strpos($route, '{') !== false) {
+                    $routeRegex = preg_replace('/\/\{([a-zA-Z0-9_]+)\}/', '/([^\/]+)', $route);
+                    if (preg_match('#^' . $routeRegex . '$#', $path, $matches)) {
+                        array_shift($matches);
 
-            if (preg_match($regexPattern, $uri, $matches)) {
-                
-                // Extrae los parámetros de la ruta (ej. 'id' => '123').
-                $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
-                
-                // Crea un nuevo objeto Request para esta petición específica.
-                $request = new Request($_GET, $_POST, $_FILES, $_SERVER, $params);
+                        preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $route, $paramNames);
+                        $paramNames = $paramNames[1];
 
-                // CAMBIO: Se adapta a la nueva sintaxis de array [Controller::class, 'action'].
-                $controllerName = $controllerAction[0];
-                $action = $controllerAction[1];
-
-                if (!class_exists($controllerName)) {
-                    $this->abort(404, "Controlador no encontrado: $controllerName");
+                        $routeParams = array_combine($paramNames, $matches);
+                        $this->request->setRouteParams($routeParams);
+                        
+                        $callback = $routeCallback;
+                        break;
+                    }
                 }
-
-                // Inyecta la conexión PDO al constructor del controlador.
-                $controller = new $controllerName($pdo);
-
-                if (!method_exists($controller, $action)) {
-                    $this->abort(404, "Método no encontrado: $action en el controlador $controllerName");
-                }
-
-                // Llama al método del controlador, pasándole el objeto Request.
-                // Esto permite al controlador acceder a los datos de la petición.
-                $controller->$action($request);
-                return; // Termina la ejecución una vez que se encuentra la ruta.
             }
         }
+        
+        if ($callback === false) {
+            http_response_code(404);
+            View::render('errors/404', ['title' => 'Página no encontrada']);
+            return;
+        }
 
-        $this->abort(404, "No se encontró una ruta para la URI: $uri");
-    }
+        if (is_array($callback)) {
+            $controllerClass = $callback[0];
+            $methodName = $callback[1];
 
-    /**
-     * Helper para mostrar una página de error.
-     * @param int $code El código de respuesta HTTP (ej. 404).
-     * @param string $message El mensaje a mostrar.
-     */
-    protected function abort(int $code, string $message): void
-    {
-        http_response_code($code);
-        // En un futuro, podrías renderizar una vista de error aquí.
-        // View::render("errors/{$code}", ['message' => $message]);
-        echo "Error $code: $message";
-        exit();
+            if (class_exists($controllerClass)) {
+                $controller = new $controllerClass($pdo);
+                call_user_func([$controller, $methodName], $this->request);
+            } else {
+                echo "Error: Controlador '$controllerClass' no encontrado.";
+            }
+        }
     }
 }
