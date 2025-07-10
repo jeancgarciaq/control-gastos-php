@@ -5,7 +5,7 @@
  * @author Jean Carlo Garcia
  * @version 1.1
  * @brief Controlador para gestionar la autenticación de usuarios.
- */
+*/
 
 namespace App\Controllers;
 
@@ -23,23 +23,8 @@ use PDO;
  * @class AuthController
  * @brief Maneja las peticiones relacionadas con la autenticación: registro, login y logout.
  */
-class AuthController
+class AuthController extends Controller
 {
-    /**
-     * La instancia de conexión a la base de datos.
-     * @var PDO
-     */
-    private PDO $pdo;
-
-    /**
-     * Constructor de AuthController.
-     *
-     * @param PDO $pdo La instancia de conexión a la base de datos, inyectada por el Router.
-     */
-    public function __construct(PDO $pdo)
-    {
-        $this->pdo = $pdo;
-    }
 
     /**
      * Muestra el formulario de registro.
