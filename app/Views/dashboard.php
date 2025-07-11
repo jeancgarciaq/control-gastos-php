@@ -20,22 +20,24 @@
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div class="bg-white p-6 rounded-lg shadow-md mr-2 ml-2">
+    <div class="bg-white p-6 rounded-lg shadow-md ml-2 mr-2">
         <h3 class="text-lg font-semibold text-gray-600 mb-2">Total de Gastos</h3>
-        <!-- TODO: Reemplazar con datos dinámicos del controlador -->
-        <p class="text-3xl font-bold text-red-500">$1,200.00</p>
+        <p class="text-3xl font-bold text-red-500">
+            $<?= number_format($totalExpenses, 2) ?>
+        </p>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow-md mr-2 ml-2">
+    <div class="bg-white p-6 rounded-lg shadow-md ml-2 mr-2">
         <h3 class="text-lg font-semibold text-gray-600 mb-2">Total de Ingresos</h3>
-        <!-- TODO: Reemplazar con datos dinámicos del controlador -->
-        <p class="text-3xl font-bold text-green-500">$2,500.00</p>
+        <p class="text-3xl font-bold text-green-500">
+            $<?= number_format($totalIncome, 2) ?>
+        </p>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow-md mr-2 ml-2">
+    <div class="bg-white p-6 rounded-lg shadow-md ml-2 mr-2">
         <h3 class="text-lg font-semibold text-gray-600 mb-2">Balance Actual</h3>
-        <!-- TODO: Reemplazar con datos dinámicos del controlador -->
-        <p class="text-3xl font-bold text-blue-500">$1,300.00</p>
+        <p class="text-3xl font-bold text-blue-500">
+            $<?= number_format($currentBalance, 2) ?>
+        </p>
     </div>
-    <!-- Puedes añadir más tarjetas de resumen aquí -->
 </div>
 
 <!-- En el futuro, aquí podrías añadir gráficos o listas de transacciones recientes -->
