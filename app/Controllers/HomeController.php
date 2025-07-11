@@ -24,7 +24,7 @@ class HomeController extends Controller
      */
     public function index()
     {
-        // No database interaction needed for the home page, but the connection is available if needed.
-        View::render('home', ['title' => 'Expense Control']);
+        View::render('home', ['title' => 'Expense Control'], null);
+
     }
 }
