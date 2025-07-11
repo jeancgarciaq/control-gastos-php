@@ -1,24 +1,19 @@
 <?php
 /**
- * @var string $title The title of the page.
- * @var array $profile The financial profile data.
- * @var array $user The authenticated user's data.
+ * @file show.php
+ * @package App\Views
+ * @author Jean Carlo Garcia
+ * @version 1.0
+ * @date 2025-07-11
+ * @brief Vista ver de Profile.
+ * 
+ * @var string $title El título de la página.
+ * @var array $user Un array que contiene los datos del usuario autenticado.
+ * @var App\Services\NavigationService $nav El servicio de navegación inyectado.
  */
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title) ?></title>
-    <!-- Asegúrate de que la ruta a tu CSS sea correcta -->
-    <link href="/output.css" rel="stylesheet">
-    <!-- Opcional: Script de Tailwind para prototipado rápido si no estás compilando -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 font-sans">
 
-    <!-- Aquí deberías incluir tu layout de navegación si tienes uno -->
+<!-- Contenido específico del Profiles Show -->
 
     <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
@@ -114,5 +109,3 @@
             </form>
         </div>
     </div>
-</body>
-</html>

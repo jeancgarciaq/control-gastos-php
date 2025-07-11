@@ -53,7 +53,10 @@ class ExpenseController extends AuthenticatedController
         $expenseModel = new Expense($this->pdo);
         $expenses = $expenseModel->getAllForUser(Auth::id());
         
-        View::render('expenses/index', ['title' => 'Mis Gastos', 'expenses' => $expenses]);
+        $this->view('expenses/index', [
+            'title' => 'Mis Gastos', 
+            'expenses' => $expenses
+        ]);
     }
 
     /**
@@ -64,7 +67,10 @@ class ExpenseController extends AuthenticatedController
     public function create(): void
     {
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('expenses/create', ['title' => 'Crear Gasto', 'profiles' => $profiles]);
+        $this->view('expenses/create', [
+            'title' => 'Crear Gasto', 
+            'profiles' => $profiles
+        ]);
     }
 
     /**
@@ -80,7 +86,7 @@ class ExpenseController extends AuthenticatedController
 
         if (!$expenseRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/create', ['title' => 'Crear Gasto', 'errors' => $expenseRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
+            $this->view('expenses/create', ['title' => 'Crear Gasto', 'errors' => $expenseRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
@@ -96,7 +102,7 @@ class ExpenseController extends AuthenticatedController
             Response::redirect('/expenses');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/create', ['title' => 'Crear Gasto', 'errors' => ['general' => ['Error al crear el gasto.']], 'data' => $data, 'profiles' => $profiles]);
+            $this->view('expenses/create', ['title' => 'Crear Gasto', 'errors' => ['general' => ['Error al crear el gasto.']], 'data' => $data, 'profiles' => $profiles]);
         }
     }
 
@@ -118,7 +124,7 @@ class ExpenseController extends AuthenticatedController
         }
 
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('expenses/edit', ['title' => 'Editar Gasto', 'expense' => $expense, 'profiles' => $profiles]);
+        $this->view('expenses/edit', ['title' => 'Editar Gasto', 'expense' => $expense, 'profiles' => $profiles]);
     }
 
     /**
@@ -143,7 +149,7 @@ class ExpenseController extends AuthenticatedController
         if (!$expenseRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             $data['id'] = $id;
-            View::render('expenses/edit', ['title' => 'Editar Gasto', 'errors' => $expenseRequest->errors(), 'expense' => $data, 'profiles' => $profiles]);
+            $this->view('expenses/edit', ['title' => 'Editar Gasto', 'errors' => $expenseRequest->errors(), 'expense' => $data, 'profiles' => $profiles]);
             return;
         }
         
@@ -160,7 +166,7 @@ class ExpenseController extends AuthenticatedController
             Response::redirect('/expenses');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('expenses/edit', ['title' => 'Editar Gasto', 'errors' => ['general' => ['Error al actualizar el gasto.']], 'expense' => $originalExpense, 'profiles' => $profiles]);
+            $this->view('expenses/edit', ['title' => 'Editar Gasto', 'errors' => ['general' => ['Error al actualizar el gasto.']], 'expense' => $originalExpense, 'profiles' => $profiles]);
         }
     }
 

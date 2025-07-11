@@ -1,20 +1,19 @@
 <?php
 /**
- * @var string $title The title of the page.
- * @var array|null $errors An array of validation errors, or null if there are no errors.
- * @var array $expense The expense data to be edited.
- * @var array $profiles an array containing the user's profiles
+ * @file edit.php
+ * @package App\Views
+ * @author Jean Carlo Garcia
+ * @version 1.0
+ * @date 2025-07-11
+ * @brief Vista editar Expense.
+ * 
+ * @var string $title El título de la página.
+ * @var array $user Un array que contiene los datos del usuario autenticado.
+ * @var App\Services\NavigationService $nav El servicio de navegación inyectado.
  */
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title) ?></title>
-    <link href="/output.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 h-screen flex items-center justify-center">
+
+<!-- Contenido específico del Expenses Edit -->
 
     <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <h2 class="text-2xl font-bold mb-4">Edit Expense</h2>
@@ -87,6 +86,3 @@
             </div>
         </form>
     </div>
-
-</body>
-</html>

@@ -6,18 +6,12 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title) ?></title>
-    <link href="/output.css?v=<?= time() ?>" rel="stylesheet">
-    <!-- Font Awesome for icons -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    integrity="sha512-p8fXQ3QkVfJ+XecPU0JafG1f23DRoLpJ3E3mXQjNsZ+6n5rOjlNQqVgF6fRvYs1H+OSnqoxvHl+Xfu7xGa8Xig=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= htmlspecialchars($title) ?></title>
+  <link href="/output.css?v=<?= time() ?>" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <script src="https://kit.fontawesome.com/394d785d07.js" crossorigin="anonymous"></script>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
 
@@ -147,10 +141,10 @@
         <a href="https://github.com/jeancgarciaq/control-gastos-php" target="_blank" class="hover:text-white">
           <i class="fab fa-github fa-lg"></i>
         </a>
-        <a href="https://x.com/yourhandle" target="_blank" class="hover:text-blue-400">
+        <a href="https://x.com/jeancgarciaq" target="_blank" class="hover:text-blue-400">
           <i class="fab fa-x-twitter fa-lg"></i>
         </a>
-        <a href="https://linkedin.com/in/yourprofile" target="_blank" class="hover:text-blue-600">
+        <a href="https://linkedin.com/in/jean-carlo-garcia-quinones" target="_blank" class="hover:text-blue-600">
           <i class="fab fa-linkedin fa-lg"></i>
         </a>
       </div>

@@ -53,7 +53,7 @@ class IncomeController extends AuthenticatedController
         $incomeModel = new Income($this->pdo);
         $incomes = $incomeModel->getAllForUser(Auth::id());
         
-        View::render('incomes/index', ['title' => 'Mis Ingresos', 'incomes' => $incomes]);
+        $this->view('incomes/index', ['title' => 'Mis Ingresos', 'incomes' => $incomes]);
     }
 
     /**
@@ -64,7 +64,7 @@ class IncomeController extends AuthenticatedController
     public function create(): void
     {
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('incomes/create', ['title' => 'Crear Ingreso', 'profiles' => $profiles]);
+        $this->view('incomes/create', ['title' => 'Crear Ingreso', 'profiles' => $profiles]);
     }
 
     /**
@@ -80,7 +80,7 @@ class IncomeController extends AuthenticatedController
 
         if (!$incomeRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('incomes/create', ['title' => 'Crear Ingreso', 'errors' => $incomeRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
+            $this->view('incomes/create', ['title' => 'Crear Ingreso', 'errors' => $incomeRequest->errors(), 'data' => $data, 'profiles' => $profiles]);
             return;
         }
 
@@ -96,7 +96,7 @@ class IncomeController extends AuthenticatedController
             Response::redirect('/incomes');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('incomes/create', ['title' => 'Crear Ingreso', 'errors' => ['general' => ['Error al crear el ingreso.']], 'data' => $data, 'profiles' => $profiles]);
+            $this->view('incomes/create', ['title' => 'Crear Ingreso', 'errors' => ['general' => ['Error al crear el ingreso.']], 'data' => $data, 'profiles' => $profiles]);
         }
     }
 
@@ -118,7 +118,7 @@ class IncomeController extends AuthenticatedController
         }
 
         $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-        View::render('incomes/edit', ['title' => 'Editar Ingreso', 'income' => $income, 'profiles' => $profiles]);
+        $this->view('incomes/edit', ['title' => 'Editar Ingreso', 'income' => $income, 'profiles' => $profiles]);
     }
 
     /**
@@ -143,7 +143,7 @@ class IncomeController extends AuthenticatedController
         if (!$incomeRequest->validate($data)) {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
             $data['id'] = $id;
-            View::render('incomes/edit', ['title' => 'Editar Ingreso', 'errors' => $incomeRequest->errors(), 'income' => $data, 'profiles' => $profiles]);
+            $this->view('incomes/edit', ['title' => 'Editar Ingreso', 'errors' => $incomeRequest->errors(), 'income' => $data, 'profiles' => $profiles]);
             return;
         }
         
@@ -160,7 +160,7 @@ class IncomeController extends AuthenticatedController
             Response::redirect('/incomess');
         } else {
             $profiles = (new Profile($this->pdo))->getAllForUser(Auth::id());
-            View::render('incomes/edit', ['title' => 'Editar Ingreso', 'errors' => ['general' => ['Error al actualizar el ingreso.']], 'income' => $originalIncome, 'profiles' => $profiles]);
+            $this->view('incomes/edit', ['title' => 'Editar Ingreso', 'errors' => ['general' => ['Error al actualizar el ingreso.']], 'income' => $originalIncome, 'profiles' => $profiles]);
         }
     }
 
