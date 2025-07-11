@@ -37,7 +37,7 @@ class AuthController extends Controller
         View::render('auth/register', [
             'title'   => 'Register',
             'siteKey' => ReCaptcha::getSiteKey(),
-        ]);
+        ], null);
     }
 
     /**
@@ -125,7 +125,7 @@ class AuthController extends Controller
      */
     public function login(): void
     {
-        View::render('auth/login', ['title' => 'Login', 'siteKey' => ReCaptcha::getSiteKey()]);
+        View::render('auth/login', ['title' => 'Login', 'siteKey' => ReCaptcha::getSiteKey()], null);
     }
 
     /**
