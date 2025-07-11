@@ -42,9 +42,9 @@ class DashboardController extends AuthenticatedController
         }
 
         // Y renderizar la vista, pasándole los datos que necesite.
-        View::render('dashboard', [
+        $this->view('dashboard', [
             'title' => 'Dashboard',
-            'user' => $user // Pasa el objeto de usuario a la vista
+            'user' => $user
         ]);
     }
 }
