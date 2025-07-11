@@ -1,8 +1,8 @@
 /**
  * @file Maneja la lógica de los formularios de la aplicación, incluyendo la integración
  * con reCAPTCHA v3 y el envío de datos mediante AJAX.
- * @author GitHub Copilot
- * @version 2.0
+ * @author Jean Carlo Garcia
+ * @version 1.0
  */
 
 document.addEventListener('DOMContentLoaded', function() {
